@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>추첨 프로그램</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg2: #111111;
+    --bg3: #1a1a1a;
+    --bg4: #222222;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0f0f0;
+    --text2: #888;
+    --text3: #555;
+    --accent: #e8ff47;
+    --accent2: #c8df20;
+    --danger: #ff4d4d;
+    --success: #47ff8a;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; }
+  body { min-height: 100vh; }
+
+  /* Layout */
+  .container { max-width: 980px; margin: 0 auto; padding: 0 24px 60px; }
+
+  /* Header */
+  header { padding: 40px 24px 0; max-width: 980px; margin: 0 auto 40px; display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 0.5px solid var(--border2); padding-bottom: 24px; }
+  .logo { display: flex; align-items: baseline; gap: 10px; }
+  .logo-title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 2px; color: var(--accent); line-height: 1; }
+  .logo-sub { font-size: 13px; color: var(--text2); letter-spacing: 3px; text-transform: uppercase; }
+  .header-stats { display: flex; gap: 24px; }
+  .hstat { text-align: right; }
+  .hstat-val { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+  .hstat-label { font-size: 11px; color: var(--text3); margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 32px; background: var(--bg2); border-radius: var(--radius); padding: 4px; border: 0.5px solid var(--border); width: fit-content; }
+  .tab { padding: 9px 24px; border-radius: 9px; font-size: 14px; cursor: pointer; color: var(--text2); transition: all 0.2s; font-weight: 400; border: none; background: transparent; font-family: 'Noto Sans KR', sans-serif; }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--accent); color: #000; font-weight: 700; }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Upload zone */
+  .upload-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 28px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 24px; position: relative; overflow: hidden; }
+  .upload-zone::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(232,255,71,0.03) 0%, transparent 60%); pointer-events: none; }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: rgba(232,255,71,0.04); }
+  .upload-icon-wrap { width: 48px; height: 48px; border-radius: 50%; background: var(--bg3); border: 0.5px solid var(--border2); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
+  .upload-title { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .upload-sub { font-size: 12px; color: var(--text3); }
+  .upload-result { padding: 8px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; display: none; }
+  .upload-result.success { background: rgba(71,255,138,0.08); border: 0.5px solid rgba(71,255,138,0.3); color: var(--success); }
+  .upload-result.error { background: rgba(255,77,77,0.08); border: 0.5px solid rgba(255,77,77,0.3); color: var(--danger); }
+
+  /* Divider */
+  .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+  .divider span { font-size: 11px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; }
+
+  /* Form */
+  .form-row { display: grid; grid-template-columns: 1fr 1fr 1.4fr auto; gap: 10px; align-items: end; margin-bottom: 24px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 11px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+  input[type=text], input[type=number], input[type=email] {
+    padding: 10px 14px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm);
+    font-size: 14px; background: var(--bg3); color: var(--text); font-family: 'Noto Sans KR', sans-serif;
+    transition: border-color 0.2s; outline: none; width: 100%;
+  }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--text3); }
+
+  /* Buttons */
+  .btn { padding: 10px 18px; border-radius: var(--radius-sm); font-size: 14px; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; font-weight: 500; transition: all 0.15s; border: 0.5px solid var(--border2); background: var(--bg3); color: var(--text); white-space: nowrap; }
+  .btn:hover { border-color: var(--border2); background: var(--bg4); }
+  .btn.accent { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .btn.accent:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn.danger { border-color: rgba(255,77,77,0.3); color: var(--danger); background: transparent; }
+  .btn.danger:hover { background: rgba(255,77,77,0.08); }
+  .btn.ghost { background: transparent; color: var(--text2); border-color: var(--border); }
+  .btn.ghost:hover { color: var(--text); border-color: var(--border2); }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .stat-label { font-size: 11px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .stat-val { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-card.accent-card { border-color: rgba(232,255,71,0.2); background: rgba(232,255,71,0.04); }
+  .stat-card.accent-card .stat-val { color: var(--accent); }
+
+  /* Table */
+  .ticket-table-wrap { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
+  .ticket-header { display: grid; grid-template-columns: 40px 1fr 130px 180px 140px 80px 60px; gap: 8px; padding: 10px 16px; border-bottom: 0.5px solid var(--border); }
+  .ticket-header span { font-size: 11px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+  .ticket-body { max-height: 360px; overflow-y: auto; }
+  .ticket-body::-webkit-scrollbar { width: 4px; }
+  .ticket-body::-webkit-scrollbar-track { background: transparent; }
+  .ticket-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .ticket-row { display: grid; grid-template-columns: 40px 1fr 130px 180px 140px 80px 60px; gap: 8px; padding: 10px 16px; border-bottom: 0.5px solid var(--border); align-items: center; transition: background 0.1s; }
+  .ticket-row:last-child { border-bottom: none; }
+  .ticket-row:hover { background: var(--bg3); }
+  .ticket-num { font-size: 12px; color: var(--text3); }
+  .ticket-name { font-size: 14px; font-weight: 500; }
+  .ticket-info { font-size: 12px; color: var(--text2); }
+  .ticket-count { display: flex; align-items: center; gap: 6px; }
+  .tc-btn { width: 24px; height: 24px; border-radius: 50%; border: 0.5px solid var(--border2); background: var(--bg4); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; color: var(--text); transition: all 0.15s; line-height: 1; }
+  .tc-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .count-val { min-width: 24px; text-align: center; font-size: 14px; font-weight: 700; color: var(--text); }
+  .empty-state { text-align: center; padding: 48px; color: var(--text3); font-size: 14px; }
+  .empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.3; }
+
+  /* Draw panel */
+  .draw-config-bar { display: flex; align-items: center; justify-content: space-between; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+  .draw-config-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .draw-config-right { display: flex; align-items: center; gap: 10px; }
+  .draw-config-label { font-size: 14px; color: var(--text2); }
+  .winner-count-wrap { display: flex; align-items: center; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); overflow: hidden; height: 40px; }
+  .winner-count-val { min-width: 48px; text-align: center; font-size: 20px; font-weight: 700; color: var(--accent); }
+  .prize-count-btn { width: 36px; height: 40px; background: transparent; border: none; color: var(--text2); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+  .prize-count-btn:hover { color: var(--accent); background: rgba(232,255,71,0.08); }
+  /* Mode toggle */
+  .mode-toggle { display: flex; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); overflow: hidden; height: 40px; }
+  .mode-btn { padding: 0 16px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--text2); font-family: 'Noto Sans KR', sans-serif; transition: all 0.15s; white-space: nowrap; }
+  .mode-btn.active { background: var(--accent); color: #000; }
+  .mode-divider { width: 0.5px; background: var(--border2); flex-shrink: 0; }
+  /* Slot tabs */
+  .slot-tab-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .slot-tabs { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
+  .slot-tab { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; color: var(--text2); border: 0.5px solid var(--border); background: var(--bg2); font-family: 'Noto Sans KR', sans-serif; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+  .slot-tab:hover { border-color: var(--border2); color: var(--text); }
+  .slot-tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .slot-tab .slot-done { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+  .slot-tab .slot-del { font-size: 14px; opacity: 0.5; margin-left: 2px; line-height: 1; }
+  .slot-tab .slot-del:hover { opacity: 1; }
+  .slot-add-btn { white-space: nowrap; flex-shrink: 0; }
+  .slot-content { display: none; }
+  .slot-content.active { display: block; }
+  .slot-name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .slot-name-input { flex: 1; padding: 9px 14px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 14px; background: var(--bg3); color: var(--text); font-family: 'Noto Sans KR', sans-serif; }
+  .slot-name-input:focus { outline: none; border-color: var(--accent); }
+  .slot-result-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 3px 10px; border-radius: 20px; background: rgba(71,255,138,0.1); border: 0.5px solid rgba(71,255,138,0.3); color: var(--success); margin-bottom: 10px; }
+  /* Duplicate suspect modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal-backdrop.hidden { display: none; }
+  .modal-box { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--radius); width: 100%; max-width: 560px; max-height: 80vh; overflow-y: auto; padding: 24px; }
+  .modal-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .modal-desc { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.6; }
+  .modal-section-label { font-size: 11px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  .dup-card { border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s; }
+  .dup-card:hover { border-color: var(--accent); background: rgba(232,255,71,0.04); }
+  .dup-card.selected { border-color: var(--accent); background: rgba(232,255,71,0.08); }
+  .dup-card-row { display: flex; justify-content: space-between; align-items: center; }
+  .dup-card-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .dup-card-tickets { font-size: 13px; color: var(--accent); font-weight: 700; }
+  .dup-card-info { display: flex; gap: 12px; margin-top: 5px; flex-wrap: wrap; }
+  .dup-info-item { font-size: 12px; color: var(--text3); }
+  .dup-info-item.diff { color: #ffaa47; }
+  .dup-diff-badge { font-size: 10px; background: rgba(255,170,71,0.15); border: 0.5px solid rgba(255,170,71,0.3); color: #ffaa47; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
+  .new-entry-preview { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; background: var(--bg3); margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+  .suspect-badge { font-size: 10px; background: rgba(255,170,71,0.15); border: 0.5px solid rgba(255,170,71,0.3); color: #ffaa47; padding: 1px 6px; border-radius: 10px; cursor: pointer; margin-left: 4px; }
+
+  .tie-panel { background: var(--bg2); border: 1.5px solid rgba(232,255,71,0.3); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; }
+  .tie-title { font-size: 12px; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; font-weight: 700; }
+  .tie-desc { font-size: 13px; color: var(--text2); margin-bottom: 14px; }
+  .tie-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .tie-card { background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 9px 14px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 8px; }
+  .tie-card:hover { border-color: var(--accent); }
+  .tie-card.selected { border-color: var(--accent); background: rgba(232,255,71,0.08); }
+  .tie-card-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .tie-card-info { font-size: 11px; color: var(--text3); }
+  .tie-check { width: 18px; height: 18px; border-radius: 50%; border: 0.5px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+  .tie-card.selected .tie-check { background: var(--accent); border-color: var(--accent); color: #000; }
+  .tie-actions { display: flex; gap: 8px; align-items: center; }
+  .tie-slots { font-size: 13px; color: var(--text2); }
+  .draw-area { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 40px 24px; min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .draw-placeholder { text-align: center; }
+  .draw-placeholder-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.15; }
+  .draw-placeholder-text { font-size: 14px; color: var(--text3); }
+  .prize-result-section { width: 100%; margin-bottom: 20px; }
+  .prize-result-section:last-child { margin-bottom: 0; }
+  .prize-result-title { font-size: 11px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .prize-badge { background: var(--accent); color: #000; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 1px; }
+  .winners-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .winner-card { background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 16px; display: flex; align-items: center; gap: 10px; transform: scale(0); transition: transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275); }
+  .winner-card.show { transform: scale(1); }
+  .winner-rank { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #000; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .winner-name { font-size: 15px; font-weight: 500; }
+  .winner-info { font-size: 11px; color: var(--text3); }
+
+  /* Spinning animation */
+  .spin-ball { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); color: #000; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 28px; animation: spinAnim 0.35s linear infinite; }
+  @keyframes spinAnim { from { transform: rotate(0deg) scale(1); } to { transform: rotate(360deg) scale(1.05); } }
+  .spin-label { font-size: 13px; color: var(--text3); margin-top: 16px; letter-spacing: 2px; text-transform: uppercase; }
+
+  /* History */
+  .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .history-count { font-size: 13px; color: var(--text3); }
+  .history-list { display: flex; flex-direction: column; gap: 10px; }
+  .history-item { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .history-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .history-ts { font-size: 12px; color: var(--text3); }
+  .history-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--bg3); border: 0.5px solid var(--border2); color: var(--text2); }
+  .history-winners { display: flex; flex-wrap: wrap; gap: 6px; }
+  .history-chip { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: var(--bg3); border: 0.5px solid var(--border); color: var(--text2); }
+
+  /* Confetti */
+  .confetti-piece { position: fixed; width: 8px; height: 8px; pointer-events: none; z-index: 9999; animation: confettiFall linear forwards; border-radius: 2px; }
+  @keyframes confettiFall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--accent); color: #000; font-size: 13px; font-weight: 700; padding: 10px 20px; border-radius: 20px; opacity: 0; transition: all 0.25s; pointer-events: none; z-index: 9999; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Bottom bar */
+  .event-bar { display: flex; gap: 12px; margin-bottom: 24px; }
+  .bottom-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* Responsive */
+  @media (max-width: 680px) {
+    .form-row { grid-template-columns: 1fr 1fr; }
+    .form-row > *:nth-child(3) { grid-column: 1 / -1; }
+    .form-row > *:nth-child(4) { grid-column: 1 / -1; }
+    .draw-top { grid-template-columns: 1fr; }
+    .ticket-header, .ticket-row { grid-template-columns: 32px 1fr 80px 68px 52px; }
+    .ticket-header span:nth-child(3), .ticket-row > *:nth-child(3) { display: none; }
+    header { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .header-stats { justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <img src="data:image/png;base64,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" alt="Music Plant" style="height:44px;object-fit:contain;margin-right:12px;">
+    <div>
+      <div class="logo-title" style="font-size:22px;letter-spacing:1px;line-height:1.1;">MUSICPLANT</div>
+      <div class="logo-sub">팬사인회 응모 프로그램</div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="hstat">
+      <div class="hstat-val" id="h-people">0</div>
+      <div class="hstat-label">참가자</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" id="h-tickets">0</div>
+      <div class="hstat-label">응모권</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" id="h-draws">0</div>
+      <div class="hstat-label">추첨 횟수</div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('entry')">응모권 입력</button>
+    <button class="tab" onclick="switchTab('draw')">추첨</button>
+    <button class="tab" onclick="switchTab('history')">당첨 기록</button>
+  </div>
+
+  <!-- 행사명 입력 (전체 공통) -->
+  <div class="event-bar">
+    <div class="form-group" style="flex:1;">
+      <label>공통 행사명</label>
+      <input type="text" id="event-name" placeholder="예: 2025 MUSICPLANT 팬사인회" style="font-size:15px;"
+        oninput="const v=this.value; const t=document.getElementById('event-name-entry'); if(t&&t!==document.activeElement) t.value=v;">
+    </div>
+  </div>
+
+  <!-- 응모권 입력 -->
+  <div class="panel active" id="tab-entry">
+    <div class="form-group" style="margin-bottom:20px;">
+      <label>행사명</label>
+      <input type="text" id="event-name-entry" placeholder="예: 2025 MUSICPLANT 팬사인회"
+        style="font-size:15px;"
+        oninput="document.getElementById('event-name').value=this.value">
+    </div>
+
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <div class="upload-icon-wrap">📂</div>
+      <div class="upload-title">엑셀 파일 드래그 또는 클릭하여 업로드</div>
+      <div class="upload-sub">.xlsx / .xls 지원 &nbsp;·&nbsp; 열 순서: 이름, 연락처, 이메일, 응모권수량, 행사명</div>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="handleFile(event)">
+    <div id="upload-result" class="upload-result"></div>
+
+    <div class="divider"><span>직접 입력</span></div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>이름 *</label>
+        <input type="text" id="inp-name" placeholder="홍길동">
+      </div>
+      <div class="form-group">
+        <label>연락처</label>
+        <input type="text" id="inp-phone" placeholder="010-0000-0000">
+      </div>
+      <div class="form-group">
+        <label>이메일</label>
+        <input type="text" id="inp-email" placeholder="example@email.com">
+      </div>
+      <button class="btn accent" onclick="addEntry()" style="align-self:end">추가</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">총 참가자</div><div class="stat-val" id="stat-people">0</div></div>
+      <div class="stat-card accent-card"><div class="stat-label">총 응모권</div><div class="stat-val" id="stat-tickets">0</div></div>
+      <div class="stat-card"><div class="stat-label">최다 응모</div><div class="stat-val" id="stat-max" style="font-size:18px;line-height:1.4">-</div></div>
+    </div>
+
+    <div class="ticket-table-wrap">
+      <div class="ticket-header">
+        <span>#</span><span>이름</span><span>연락처</span><span>이메일</span><span>행사명</span><span>응모권</span><span></span>
+      </div>
+      <div class="ticket-body" id="ticket-body">
+        <div class="empty-state" id="empty-msg">
+          <div class="empty-icon">🎫</div>
+          등록된 응모권이 없습니다
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-bar">
+      <button class="btn danger" onclick="clearAll()">전체 삭제</button>
+    </div>
+  </div>
+
+  <!-- 추첨 -->
+  <div class="panel" id="tab-draw">
+    <!-- 행사 슬롯 탭 -->
+    <div class="slot-tab-bar">
+      <div class="slot-tabs" id="slot-tabs"></div>
+      <button class="btn ghost slot-add-btn" id="slot-add-btn" onclick="addSlot()">+ 행사 추가</button>
+      <button class="btn ghost" onclick="document.getElementById('event-names-file').click()" style="white-space:nowrap;">📂 행사명 업로드</button>
+      <input type="file" id="event-names-file" accept=".xlsx,.xls" style="display:none" onchange="loadEventNamesFromExcel(event)">
+      <button class="btn accent" onclick="startAllDraw()" style="white-space:nowrap;">⚡ 전체 일괄 추첨</button>
+      <button class="btn ghost" onclick="downloadAllResults()" style="white-space:nowrap;">📥 전체 다운로드</button>
+    </div>
+
+    <!-- 일괄 추첨 진행 상태바 -->
+    <div id="bulk-progress" style="display:none; background:var(--bg2); border:0.5px solid var(--border); border-radius:var(--radius); padding:14px 18px; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:13px; color:var(--text2);" id="bulk-status-text">추첨 준비 중...</span>
+        <span style="font-size:13px; font-weight:700; color:var(--accent);" id="bulk-status-count"></span>
+      </div>
+      <div style="height:4px; background:var(--bg4); border-radius:2px; overflow:hidden;">
+        <div id="bulk-progress-bar" style="height:100%; background:var(--accent); border-radius:2px; width:0%; transition:width 0.3s;"></div>
+      </div>
+    </div>
+
+    <!-- 슬롯 컨텐츠 -->
+    <div id="slot-contents"></div>
+  </div>
+
+  <!-- 기록 -->
+  <div class="panel" id="tab-history">
+    <div class="history-header">
+      <span class="history-count" id="history-count">기록 없음</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn ghost" onclick="downloadAllHistory()">📥 전체 엑셀</button>
+        <button class="btn danger" onclick="clearHistory()">기록 삭제</button>
+      </div>
+    </div>
+    <div class="history-list" id="history-list">
+      <div class="empty-state"><div class="empty-icon">📋</div>추첨 기록이 없습니다</div>
+    </div>
+  </div>
+</div>
+
+<!-- 중복 의심 확인 모달 -->
+<div class="modal-backdrop hidden" id="dup-modal">
+  <div class="modal-box">
+    <div class="modal-title">⚠️ 동일 이름 감지</div>
+    <div class="modal-desc" id="dup-modal-desc"></div>
+    <div class="modal-section-label">신규 입력 내용</div>
+    <div class="new-entry-preview" id="dup-new-preview"></div>
+    <div class="modal-section-label">기존 등록된 동명 참가자</div>
+    <div id="dup-candidates"></div>
+    <div class="modal-actions">
+      <button class="btn accent" onclick="dupConfirm('merge')" id="dup-btn-merge">응모권 합산</button>
+      <button class="btn ghost" onclick="dupConfirm('add')">별도 신규 등록</button>
+      <button class="btn danger" onclick="dupConfirm('cancel')">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────
+let entries = [], history = [], idCounter = 1;
+let slots = [];        // [{id, name, mode, winnerCount, results, tieData}]
+let activeSlotId = null;
+const MAX_SLOTS = 50;
+
+// ── Toast ─────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Masking ───────────────────────────────────────────────
+function maskName(name) {
+  if (!name) return '';
+  if (name.includes(' ')) return name.split(' ').map(maskWord).join(' ');
+  return maskWord(name);
+}
+function maskWord(w) {
+  if (!w) return '';
+  if (w.length === 1) return w;
+  if (w.length === 2) return w[0] + '*';
+  return w[0] + '*'.repeat(w.length - 2) + w[w.length - 1];
+}
+
+// ── Slot Management ───────────────────────────────────────
+function slotId() { return Date.now() + Math.random(); }
+
+function addSlot() {
+  if (slots.length >= MAX_SLOTS) { showToast(`최대 ${MAX_SLOTS}개 행사까지 추가 가능합니다`); return; }
+  const id = slotId();
+  const n = slots.length + 1;
+  slots.push({ id, name: `행사 ${n}`, mode: 'random', winnerCount: 1, results: [], tieData: null });
+  renderSlots();
+  switchSlot(id);
+  document.getElementById(`slot-add-btn`).style.display = slots.length >= MAX_SLOTS ? 'none' : '';
+}
+
+function loadEventNamesFromExcel(e) {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  if (!file.name.match(/\.(xlsx|xls)$/i)) { showToast('xlsx 또는 xls 파일만 가능합니다'); return; }
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // 헤더 행 감지 후 이름 추출 (첫 열 사용)
+      const firstCell = String(rows[0]?.[0] || '').trim();
+      const startRow = (isNaN(firstCell) && firstCell) ? 1 : 0;
+      const names = rows.slice(startRow)
+        .map(r => String(r[0] || '').trim())
+        .filter(n => n.length > 0);
+
+      if (!names.length) { showToast('행사명을 찾을 수 없습니다'); return; }
+      if (names.length > MAX_SLOTS) { showToast(`최대 ${MAX_SLOTS}개까지 가능합니다 (파일: ${names.length}개)`); return; }
+
+      if (!confirm(`기존 슬롯을 모두 지우고 ${names.length}개의 행사를 새로 만들까요?`)) return;
+
+      // 기존 슬롯 초기화 후 새로 생성
+      slots = [];
+      activeSlotId = null;
+      names.forEach(name => {
+        const id = slotId();
+        slots.push({ id, name, mode: 'random', winnerCount: 1, results: [], tieData: null });
+      });
+      activeSlotId = slots[0].id;
+
+      renderSlots();
+      document.getElementById('slot-add-btn').style.display = slots.length >= MAX_SLOTS ? 'none' : '';
+      showToast(`${names.length}개 행사가 생성됐습니다`);
+    } catch (err) {
+      showToast('파일을 읽을 수 없습니다: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function removeSlot(id, e) {
+  e.stopPropagation();
+  if (slots.length === 1) { showToast('마지막 행사는 삭제할 수 없습니다'); return; }
+  if (!confirm('이 행사를 삭제하시겠습니까?')) return;
+  slots = slots.filter(s => s.id !== id);
+  if (activeSlotId === id) activeSlotId = slots[0].id;
+  renderSlots();
+  document.getElementById(`slot-add-btn`).style.display = slots.length >= MAX_SLOTS ? 'none' : '';
+}
+
+function switchSlot(id) {
+  activeSlotId = id;
+  document.querySelectorAll('.slot-tab').forEach(t => t.classList.toggle('active', +t.dataset.id === id));
+  document.querySelectorAll('.slot-content').forEach(c => c.classList.toggle('active', +c.dataset.id === id));
+}
+
+function getSlot(id) { return slots.find(s => s.id === id); }
+function activeSlot() { return getSlot(activeSlotId); }
+
+function updateSlotName(id, value) {
+  const s = getSlot(id);
+  if (!s) return;
+  s.name = value;
+  // 탭의 텍스트 노드만 정확히 교체 (dot · × 버튼 제외)
+  const tab = document.querySelector(`.slot-tab[data-id='${id}']`);
+  if (!tab) return;
+  const label = tab.querySelector('.slot-label');
+  if (label) label.textContent = value || '행사';
+}
+
+function renderSlots() {
+  const tabsEl = document.getElementById('slot-tabs');
+  const contentsEl = document.getElementById('slot-contents');
+  tabsEl.innerHTML = '';
+  contentsEl.innerHTML = '';
+
+  // 이름순 정렬 (원본 배열은 그대로, 표시만 정렬)
+  const sorted = [...slots].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+  sorted.forEach(s => {
+    // Tab
+    const tab = document.createElement('button');
+    tab.className = 'slot-tab' + (s.id === activeSlotId ? ' active' : '');
+    tab.dataset.id = s.id;
+    tab.onclick = () => switchSlot(s.id);
+    tab.innerHTML = `${s.results.length ? '<span class="slot-done"></span>' : ''}<span class="slot-label">${s.name}</span><span class="slot-del" onclick="removeSlot(${s.id}, event)">×</span>`;
+    tabsEl.appendChild(tab);
+
+    // Content
+    const content = document.createElement('div');
+    content.className = 'slot-content' + (s.id === activeSlotId ? ' active' : '');
+    content.dataset.id = s.id;
+    content.innerHTML = `
+      <div class="slot-name-row">
+        <input class="slot-name-input" placeholder="행사명 입력..." value="${s.name}"
+          oninput="updateSlotName(${s.id}, this.value)">
+      </div>
+      <div class="draw-config-bar">
+        <div class="draw-config-left">
+          <span class="draw-config-label">추첨 방식</span>
+          <div class="mode-toggle">
+            <button class="mode-btn ${s.mode==='random'?'active':''}" onclick="setSlotMode(${s.id},'random',this)">🎲 랜덤</button>
+            <div class="mode-divider"></div>
+            <button class="mode-btn ${s.mode==='top'?'active':''}" onclick="setSlotMode(${s.id},'top',this)">🏆 응모순</button>
+          </div>
+          <span class="draw-config-label" style="margin-left:8px;">당첨자 수</span>
+          <div class="winner-count-wrap">
+            <button class="prize-count-btn" onclick="changeSlotCount(${s.id},-1)">−</button>
+            <input type="number" id="wc-${s.id}" value="${s.winnerCount}" min="1"
+              style="width:56px;text-align:center;font-size:20px;font-weight:700;color:var(--accent);background:transparent;border:none;outline:none;font-family:'Noto Sans KR',sans-serif;padding:0;"
+              oninput="getSlot(${s.id}).winnerCount=Math.max(1,parseInt(this.value)||1);this.value=getSlot(${s.id}).winnerCount;">
+            <button class="prize-count-btn" onclick="changeSlotCount(${s.id},1)">+</button>
+          </div>
+          <span class="draw-config-label">명</span>
+        </div>
+        <div class="draw-config-right">
+          <button class="btn accent" onclick="startSlotDraw(${s.id})" style="padding:11px 24px;font-size:14px;">${s.mode==='random'?'🎲':'🏆'} 추첨 시작</button>
+          <button class="btn ghost" onclick="downloadSlotExcel(${s.id})">📥 엑셀</button>
+          <button class="btn ghost" onclick="copySlotResults(${s.id})">복사</button>
+        </div>
+      </div>
+      <div id="tie-panel-${s.id}" style="display:none;"></div>
+      <div class="draw-area" id="draw-area-${s.id}">
+        ${s.results.length ? '' : (() => {
+          const pool = getSlotPool(s);
+          return `<div class="draw-placeholder"><div class="draw-placeholder-icon">🎰</div><div class="draw-placeholder-text">추첨 방식과 당첨자 수를 설정하고 추첨하세요</div><div style="margin-top:8px;font-size:12px;color:var(--text3);">응모자 ${pool.length}명</div></div>`;
+        })()}
+      </div>`;
+    contentsEl.appendChild(content);
+
+    // Re-render existing results
+    if (s.results.length) renderSlotResults(s.id, false);
+  });
+}
+
+function setSlotMode(id, mode, btn) {
+  const s = getSlot(id);
+  s.mode = mode;
+  const wrap = btn.closest('.mode-toggle');
+  wrap.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const startBtn = btn.closest('.draw-config-bar').querySelector('.btn.accent');
+  startBtn.textContent = mode === 'random' ? '🎲 추첨 시작' : '🏆 추첨 시작';
+}
+
+function changeSlotCount(id, d) {
+  const s = getSlot(id);
+  s.winnerCount = Math.max(1, s.winnerCount + d);
+  const el = document.getElementById('wc-' + id);
+  if (el) el.value = s.winnerCount;
+}
+
+// ── 전체 일괄 추첨 ────────────────────────────────────────
+async function startAllDraw() {
+  if (!entries.length) { alert('참가자를 먼저 등록해주세요'); return; }
+  const pending = slots.filter(s => !s.results.length);
+  if (!pending.length) {
+    if (!confirm('모든 행사가 이미 추첨됐습니다. 전체 다시 추첨할까요?')) return;
+    slots.forEach(s => { s.results = []; s.tieData = null; });
+    renderSlots();
+    startAllDraw();
+    return;
+  }
+  if (!confirm(`${pending.length}개 행사를 순서대로 자동 추첨합니다.\n(동점자가 발생하면 해당 행사에서 멈추고 선택을 기다립니다)`)) return;
+
+  const progress = document.getElementById('bulk-progress');
+  const statusText = document.getElementById('bulk-status-text');
+  const statusCount = document.getElementById('bulk-status-count');
+  const bar = document.getElementById('bulk-progress-bar');
+  progress.style.display = 'block';
+
+  for (let i = 0; i < pending.length; i++) {
+    const s = pending[i];
+    statusText.textContent = `추첨 중: ${s.name}`;
+    statusCount.textContent = `${i + 1} / ${pending.length}`;
+    bar.style.width = `${Math.round((i / pending.length) * 100)}%`;
+
+    // 해당 슬롯으로 탭 전환
+    switchSlot(s.id);
+
+    // 추첨 실행 (동점자 있으면 중단하고 대기)
+    const hasTie = await drawSlotAsync(s.id);
+    if (hasTie) {
+      statusText.textContent = `⚠️ 동점자 처리 필요: ${s.name} — 선택 후 계속됩니다`;
+      statusCount.textContent = `${i + 1} / ${pending.length} (일시 중단)`;
+      // 동점자 확정 후 나머지 계속 진행
+      await waitForTieResolved(s.id);
+      // 나머지 슬롯 계속
+      const remaining = pending.slice(i + 1);
+      if (remaining.length) {
+        for (let j = 0; j < remaining.length; j++) {
+          const rs = remaining[j];
+          statusText.textContent = `추첨 중: ${rs.name}`;
+          statusCount.textContent = `${i + j + 2} / ${pending.length}`;
+          bar.style.width = `${Math.round(((i + j + 1) / pending.length) * 100)}%`;
+          switchSlot(rs.id);
+          const rHasTie = await drawSlotAsync(rs.id);
+          if (rHasTie) {
+            statusText.textContent = `⚠️ 동점자 처리 필요: ${rs.name}`;
+            await waitForTieResolved(rs.id);
+          }
+        }
+      }
+      break;
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  bar.style.width = '100%';
+  statusText.textContent = `✅ 전체 추첨 완료!`;
+  statusCount.textContent = `${pending.length} / ${pending.length}`;
+  launchConfetti();
+  setTimeout(() => { progress.style.display = 'none'; }, 3000);
+}
+
+function waitForTieResolved(id) {
+  return new Promise(resolve => {
+    const panel = document.getElementById('tie-panel-' + id);
+    // confirmTie 호출 후 패널이 숨겨지면 resolve
+    const observer = new MutationObserver(() => {
+      if (panel.style.display === 'none') { observer.disconnect(); resolve(); }
+    });
+    observer.observe(panel, { attributes: true, attributeFilter: ['style'] });
+  });
+}
+
+function drawSlotAsync(id) {
+  return new Promise(resolve => {
+    const s = getSlot(id);
+    s.results = [];
+    s.tieData = null;
+    document.getElementById('tie-panel-' + id).style.display = 'none';
+    const area = document.getElementById('draw-area-' + id);
+    const pool = getSlotPool(s);
+    if (!pool.length) { resolve(false); return; }
+    const actualCount = Math.min(s.winnerCount, pool.length);
+
+    if (s.mode === 'random') {
+      area.innerHTML = `<div class="spin-ball">?</div><div class="spin-label">추첨 중...</div>`;
+      let drawPool = [...pool], step = 0;
+      const iv = setInterval(() => {
+        if (step >= actualCount) {
+          clearInterval(iv);
+          renderSlotResults(id);
+          saveSlotHistory(id);
+          resolve(false);
+          return;
+        }
+        const w = weightedRandom(drawPool);
+        drawPool = drawPool.filter(e => e.id !== w.id);
+        s.results.push(w);
+        step++;
+      }, 300);
+    } else {
+      area.innerHTML = `<div class="spin-ball">🏆</div><div class="spin-label">집계 중...</div>`;
+      setTimeout(() => {
+        const sorted = [...pool].sort((a,b) => b.tickets - a.tickets);
+        const cutline = sorted[actualCount - 1].tickets;
+        const confirmed = sorted.filter(e => e.tickets > cutline);
+        const tied = sorted.filter(e => e.tickets === cutline);
+        const remaining = actualCount - confirmed.length;
+        if (tied.length === remaining) {
+          s.results = [...confirmed, ...tied];
+          renderSlotResults(id); saveSlotHistory(id);
+          resolve(false);
+        } else {
+          s.results = [...confirmed];
+          s.tieData = { tied, remaining };
+          renderSlotResults(id, true);
+          showTiePanel(id, tied, remaining);
+          resolve(true);
+        }
+      }, 500);
+    }
+  });
+}
+
+// ── Draw ──────────────────────────────────────────────────
+function weightedRandom(pool) {
+  const total = pool.reduce((s,e) => s+e.tickets, 0);
+  let r = Math.random() * total;
+  for (const e of pool) { r -= e.tickets; if (r<=0) return e; }
+  return pool[pool.length-1];
+}
+
+// 슬롯 행사명과 일치하는 응모자만 반환
+// - 해당 행사명으로 등록된 응모자가 있으면 그것만 사용
+// - 없으면(행사명 없이 등록된 전체 응모자) 전체 사용
+function getSlotPool(s) {
+  const matched = entries.filter(e => e.eventName === s.name);
+  if (matched.length > 0) return matched;
+  // 매칭 없을 때: 행사명이 없는 응모자만 (전체 공용 풀)
+  const noEvent = entries.filter(e => !e.eventName);
+  return noEvent.length > 0 ? noEvent : entries;
+}
+
+function startSlotDraw(id) {
+  const s = getSlot(id);
+  if (!entries.length) { alert('참가자를 먼저 등록해주세요'); return; }
+  const pool = getSlotPool(s);
+  if (!pool.length) { alert('응모자가 없습니다'); return; }
+  // 응모자가 당첨 수보다 적으면 전원 당첨
+  const actualCount = Math.min(s.winnerCount, pool.length);
+  document.getElementById('tie-panel-' + id).style.display = 'none';
+  s.results = [];
+  s.tieData = null;
+  const area = document.getElementById('draw-area-' + id);
+  if (s.mode === 'random') {
+    area.innerHTML = `<div class="spin-ball">?</div><div class="spin-label">추첨 중...</div>`;
+    let drawPool = [...pool], step = 0;
+    const iv = setInterval(() => {
+      if (step >= actualCount) { clearInterval(iv); renderSlotResults(id); saveSlotHistory(id); launchConfetti(); return; }
+      const w = weightedRandom(drawPool);
+      drawPool = drawPool.filter(e => e.id !== w.id);
+      s.results.push(w);
+      step++;
+    }, 500);
+  } else {
+    area.innerHTML = `<div class="spin-ball">🏆</div><div class="spin-label">집계 중...</div>`;
+    setTimeout(() => {
+      const sorted = [...pool].sort((a,b) => b.tickets - a.tickets);
+      const cutline = sorted[actualCount - 1].tickets;
+      const confirmed = sorted.filter(e => e.tickets > cutline);
+      const tied = sorted.filter(e => e.tickets === cutline);
+      const remaining = actualCount - confirmed.length;
+      if (tied.length === remaining) {
+        s.results = [...confirmed, ...tied];
+        renderSlotResults(id); saveSlotHistory(id); launchConfetti();
+      } else {
+        s.results = [...confirmed];
+        s.tieData = { tied, remaining };
+        renderSlotResults(id, true);
+        showTiePanel(id, tied, remaining);
+      }
+    }, 800);
+  }
+}
+
+function showTiePanel(id, tied, slots_n) {
+  const panel = document.getElementById('tie-panel-' + id);
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div class="tie-panel">
+      <div class="tie-title">동점자 처리</div>
+      <div class="tie-desc">응모 <strong style="color:var(--accent)">${tied[0].tickets}회</strong> 동점자 ${tied.length}명 중 <strong style="color:var(--accent)">${slots_n}명</strong>을 선택해주세요</div>
+      <div class="tie-grid">
+        ${tied.map(e => `<div class="tie-card" id="tiecard-${id}-${e.id}" onclick="toggleTieCard(${id},${e.id})">
+          <div class="tie-check" id="tiecheck-${id}-${e.id}">✓</div>
+          <div><div class="tie-card-name">${maskName(e.name)}</div><div class="tie-card-info">${e.phone||''}</div></div>
+        </div>`).join('')}
+      </div>
+      <div class="tie-actions">
+        <button class="btn accent" onclick="confirmTie(${id})">선택 완료</button>
+        <span class="tie-slots" id="tie-slots-label-${id}">0 / ${slots_n}명 선택됨</span>
+      </div>
+    </div>`;
+  panel._tiedEntries = tied;
+  panel._slots = slots_n;
+  panel._selected = new Set();
+}
+
+function toggleTieCard(slotId, entryId) {
+  const panel = document.getElementById('tie-panel-' + slotId);
+  const sel = panel._selected, max = panel._slots;
+  if (sel.has(entryId)) {
+    sel.delete(entryId);
+    document.getElementById(`tiecard-${slotId}-${entryId}`).classList.remove('selected');
+  } else {
+    if (sel.size >= max) {
+      const first = [...sel][0]; sel.delete(first);
+      document.getElementById(`tiecard-${slotId}-${first}`).classList.remove('selected');
+    }
+    sel.add(entryId);
+    document.getElementById(`tiecard-${slotId}-${entryId}`).classList.add('selected');
+  }
+  document.getElementById(`tie-slots-label-${slotId}`).textContent = `${sel.size} / ${max}명 선택됨`;
+}
+
+function confirmTie(slotId) {
+  const panel = document.getElementById('tie-panel-' + slotId);
+  const sel = panel._selected, max = panel._slots;
+  if (sel.size !== max) { alert(`${max}명을 정확히 선택해주세요 (현재 ${sel.size}명)`); return; }
+  const s = getSlot(slotId);
+  s.results = [...s.results, ...panel._tiedEntries.filter(e => sel.has(e.id))];
+  panel.style.display = 'none';
+  renderSlotResults(slotId); saveSlotHistory(slotId); launchConfetti();
+}
+
+function renderSlotResults(id, partial = false) {
+  const s = getSlot(id);
+  const area = document.getElementById('draw-area-' + id);
+  area.innerHTML = '';
+  if (partial) {
+    const notice = document.createElement('div');
+    notice.style.cssText = 'width:100%;margin-bottom:16px;font-size:13px;color:var(--accent);text-align:center;letter-spacing:1px;';
+    notice.textContent = '확정 당첨자 — 동점자 처리 후 최종 확정됩니다';
+    area.appendChild(notice);
+  }
+  const badge = document.createElement('div');
+  badge.style.cssText = 'width:100%;margin-bottom:12px;';
+  badge.innerHTML = `<span style="font-size:11px;color:var(--text3);letter-spacing:1px;">${s.mode==='random'?'🎲 랜덤 추첨':'🏆 응모 많은 순'} · ${s.name}</span>`;
+  area.appendChild(badge);
+  const grid = document.createElement('div');
+  grid.className = 'winners-grid'; grid.style.width = '100%';
+  s.results.forEach((w, i) => {
+    const card = document.createElement('div');
+    card.className = 'winner-card';
+    card.innerHTML = `<div class="winner-rank">${i+1}</div><div><div class="winner-name">${maskName(w.name)}</div><div class="winner-info">${[w.phone,w.email].filter(Boolean).join(' · ')} &nbsp;·&nbsp; 응모 ${w.tickets}회</div></div>`;
+    grid.appendChild(card);
+    if (!partial) setTimeout(() => card.classList.add('show'), 100 + i * 140);
+    else card.classList.add('show');
+  });
+  area.appendChild(grid);
+  // 슬롯 탭에 완료 dot 표시
+  const tab = document.querySelector(`.slot-tab[data-id='${id}']`);
+  if (tab && !partial) { if (!tab.querySelector('.slot-done')) { const dot = document.createElement('span'); dot.className = 'slot-done'; tab.prepend(dot); } }
+}
+
+function saveSlotHistory(id) {
+  const s = getSlot(id);
+  const now = new Date();
+  const ts = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const baseName = document.getElementById('event-name').value.trim() || 'MUSICPLANT 팬사인회';
+  history.unshift({ ts, winners: [...s.results], total: entries.length, eventName: `${baseName} - ${s.name}`, mode: s.mode });
+  document.getElementById('h-draws').textContent = history.length;
+}
+
+function copySlotResults(id) {
+  const s = getSlot(id);
+  if (!s.results.length) { alert('추첨 결과가 없습니다'); return; }
+  const base = document.getElementById('event-name').value.trim() || 'MUSICPLANT 팬사인회';
+  const text = `[${base} - ${s.name}]\n` + s.results.map((w,i) => `${i+1}. ${maskName(w.name)} (${w.phone||''} / ${w.email||''}) - 응모 ${w.tickets}회`).join('\n');
+  navigator.clipboard.writeText(text).then(() => showToast('클립보드에 복사됐습니다')).catch(() => alert(text));
+}
+
+function downloadSlotExcel(id) {
+  const s = getSlot(id);
+  if (!s.results.length) { alert('추첨 결과가 없습니다'); return; }
+  const wb = XLSX.utils.book_new();
+  const now = new Date();
+  const base = document.getElementById('event-name').value.trim() || 'MUSICPLANT_팬사인회';
+  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const ws1 = XLSX.utils.aoa_to_sheet([['순위','이름(마스킹)','연락처','이메일','응모횟수'], ...s.results.map((w,i) => [i+1, maskName(w.name), w.phone||'', w.email||'', w.tickets])]);
+  ws1['!cols'] = [{wch:6},{wch:14},{wch:18},{wch:28},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws1, s.name.slice(0,31));
+  const ws2 = XLSX.utils.aoa_to_sheet([['번호','이름','연락처','이메일','응모권수'], ...entries.map((e,i) => [i+1, e.name, e.phone||'', e.email||'', e.tickets])]);
+  ws2['!cols'] = [{wch:6},{wch:14},{wch:18},{wch:28},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws2, '전체 응모자');
+  XLSX.writeFile(wb, `${base}_${s.name}_당첨자_${dateStr}.xlsx`);
+}
+
+function downloadAllResults() {
+  const done = slots.filter(s => s.results.length);
+  if (!done.length) { alert('추첨된 행사가 없습니다'); return; }
+
+  const wb = XLSX.utils.book_new();
+  const now = new Date();
+  const base = document.getElementById('event-name').value.trim() || 'MUSICPLANT_팬사인회';
+  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+
+  // 1. 전체 요약 시트 (모든 행사 당첨자 한 눈에)
+  const summaryRows = [['행사명', '순위', '이름(마스킹)', '연락처', '이메일', '응모횟수']];
+  const sortedDone = [...done].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  sortedDone.forEach(s => {
+    s.results.forEach((w, i) => {
+      summaryRows.push([s.name, i + 1, maskName(w.name), w.phone || '', w.email || '', w.tickets]);
+    });
+    summaryRows.push([]); // 행사 사이 빈 줄
+  });
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSummary['!cols'] = [{wch:28},{wch:6},{wch:14},{wch:18},{wch:28},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, wsSummary, '전체 요약');
+
+  // 2. 행사별 개별 시트
+  sortedDone.forEach(s => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['순위','이름(마스킹)','연락처','이메일','응모횟수'],
+      ...s.results.map((w, i) => [i+1, maskName(w.name), w.phone||'', w.email||'', w.tickets])
+    ]);
+    ws['!cols'] = [{wch:6},{wch:14},{wch:18},{wch:28},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, ws, s.name.slice(0, 31));
+  });
+
+  // 3. 전체 응모자 시트
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    ['번호','이름','연락처','이메일','응모권수'],
+    ...entries.map((e, i) => [i+1, e.name, e.phone||'', e.email||'', e.tickets])
+  ]);
+  ws2['!cols'] = [{wch:6},{wch:14},{wch:18},{wch:28},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws2, '전체 응모자');
+
+  XLSX.writeFile(wb, `${base}_전체당첨결과_${dateStr}.xlsx`);
+  showToast(`${done.length}개 행사 당첨 결과 다운로드 완료`);
+}
+
+function downloadAllHistory() {
+  const done = slots.filter(s => s.results.length);
+  if (!done.length) { alert('추첨된 행사가 없습니다'); return; }
+  const wb = XLSX.utils.book_new();
+  const now = new Date();
+  const base = document.getElementById('event-name').value.trim() || 'MUSICPLANT_팬사인회';
+  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  done.forEach(s => {
+    const ws = XLSX.utils.aoa_to_sheet([['순위','이름(마스킹)','연락처','이메일','응모횟수'], ...s.results.map((w,i) => [i+1, maskName(w.name), w.phone||'', w.email||'', w.tickets])]);
+    ws['!cols'] = [{wch:6},{wch:14},{wch:18},{wch:28},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, ws, s.name.slice(0,31));
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet([['번호','이름','연락처','이메일','응모권수'], ...entries.map((e,i) => [i+1, e.name, e.phone||'', e.email||'', e.tickets])]);
+  ws2['!cols'] = [{wch:6},{wch:14},{wch:18},{wch:28},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws2, '전체 응모자');
+  XLSX.writeFile(wb, `${base}_전체당첨자_${dateStr}.xlsx`);
+}
+
+// ── Excel Upload ──────────────────────────────────────────
+function onDragOver(e) { e.preventDefault(); document.getElementById('upload-zone').classList.add('dragover'); }
+function onDragLeave() { document.getElementById('upload-zone').classList.remove('dragover'); }
+function onDrop(e) { e.preventDefault(); document.getElementById('upload-zone').classList.remove('dragover'); if (e.dataTransfer.files[0]) processExcel(e.dataTransfer.files[0]); }
+function handleFile(e) { if (e.target.files[0]) processExcel(e.target.files[0]); e.target.value = ''; }
+
+function processExcel(file) {
+  if (!file.name.match(/\.(xlsx|xls)$/i)) { showUploadResult('error', '.xlsx 또는 .xls 파일만 업로드 가능합니다'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if (rows.length < 2) { showUploadResult('error', '데이터가 없습니다'); return; }
+
+      const firstRow = rows[0].map(c => String(c).trim());
+      const hasHeader = isNaN(firstRow[0]) && firstRow.some(v => ['이름','name','Name'].includes(v));
+      const startRow = hasHeader ? 1 : 0;
+
+      // 헤더로 열 인덱스 감지 (없으면 기본 순서: 이름0 연락처1 이메일2 응모권3 행사명4)
+      let colName=0, colPhone=1, colEmail=2, colTickets=3, colEvent=4;
+      if (hasHeader) {
+        firstRow.forEach((h, i) => {
+          const lh = h.toLowerCase();
+          if (['이름','name'].includes(lh)) colName = i;
+          else if (['연락처','전화','phone','tel'].some(k => lh.includes(k))) colPhone = i;
+          else if (['이메일','email','mail'].some(k => lh.includes(k))) colEmail = i;
+          else if (['응모','ticket','수량'].some(k => lh.includes(k))) colTickets = i;
+          else if (['행사','event','이벤트'].some(k => lh.includes(k))) colEvent = i;
+        });
+      }
+
+      let added = 0, merged = 0, suspects = 0;
+      const eventMap = new Map();
+
+      for (let i = startRow; i < rows.length; i++) {
+        const row = rows[i];
+        const name = String(row[colName]||'').trim(); if (!name) continue;
+        const phone = String(row[colPhone]||'').trim();
+        const email = String(row[colEmail]||'').trim();
+        const tickets = Math.max(1, parseInt(row[colTickets])||1);
+        const eventName = String(row[colEvent]||'').trim();
+
+        // 행사명이 있을 때는 행사명까지 일치해야 합산, 없으면 행사 무관 합산
+        const exactDup = eventName
+          ? entries.find(e => e.name===name && e.phone===phone && e.email===email && e.eventName===eventName)
+          : entries.find(e => e.name===name && e.phone===phone && e.email===email && !e.eventName);
+
+        if (exactDup) { exactDup.tickets += tickets; merged++; }
+        else {
+          const suspectList = findSameName(name).filter(e => isSuspect(e, {name, phone, email}));
+          if (suspectList.length) {
+            entries.push({id: idCounter++, name, phone, email, tickets, eventName, suspect: true});
+            suspects++;
+          } else {
+            entries.push({id: idCounter++, name, phone, email, tickets, eventName}); added++;
+          }
+        }
+
+        if (eventName && !eventMap.has(eventName)) eventMap.set(eventName, []);
+      }
+
+      renderEntries();
+
+      // 행사명이 있으면 추첨 슬롯 자동 생성
+      if (eventMap.size > 0) {
+        const eventNames = [...eventMap.keys()];
+        if (eventNames.length > MAX_SLOTS) {
+          showUploadResult('error', `행사가 ${eventNames.length}개로 최대(${MAX_SLOTS}개)를 초과합니다`);
+          return;
+        }
+        const doCreate = confirm(`파일에서 ${eventNames.length}개의 행사명을 발견했습니다.\n추첨 탭의 기존 슬롯을 지우고 행사명으로 새로 만들까요?`);
+        if (doCreate) {
+          slots = [];
+          activeSlotId = null;
+          eventNames.forEach(eName => {
+            const id = slotId();
+            slots.push({ id, name: eName, mode: 'random', winnerCount: 1, results: [], tieData: null });
+          });
+          activeSlotId = slots[0].id;
+          renderSlots();
+          document.getElementById('slot-add-btn').style.display = slots.length >= MAX_SLOTS ? 'none' : '';
+          // 공통 행사명도 업데이트
+          const baseName = document.getElementById('event-name').value.trim();
+          if (!baseName) {
+            document.getElementById('event-name').value = eventNames[0];
+            const entryInput = document.getElementById('event-name-entry');
+            if (entryInput) entryInput.value = eventNames[0];
+          }
+        }
+      }
+
+      let msg = `${file.name} — ${added}명 추가`;
+      if (merged) msg += ` · ${merged}명 합산`;
+      if (suspects) msg += ` · ⚠️ ${suspects}명 중복 의심`;
+      if (eventMap.size > 0) msg += ` · 행사 ${eventMap.size}개 감지`;
+      showUploadResult(suspects ? 'error' : 'success', msg);
+    } catch(err) { showUploadResult('error', '파일을 읽을 수 없습니다: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showUploadResult(type, msg) {
+  const el = document.getElementById('upload-result');
+  el.className = 'upload-result ' + type; el.textContent = msg; el.style.display = '';
+}
+
+// ── Duplicate Suspect Detection ───────────────────────────
+let _pendingEntry = null;      // 처리 대기 중인 신규 입력
+let _selectedDupId = null;     // 모달에서 선택된 기존 참가자 id
+
+function findSameName(name) {
+  return entries.filter(e => e.name === name);
+}
+
+function isSuspect(existing, newEntry) {
+  // 이름은 같지만 전화번호 또는 이메일이 다른 경우
+  return existing.name === newEntry.name &&
+    (existing.phone !== newEntry.phone || existing.email !== newEntry.email);
+}
+
+function showDupModal(newEntry, suspects) {
+  _pendingEntry = newEntry;
+  _selectedDupId = suspects[0].id; // 기본 선택
+
+  const desc = document.getElementById('dup-modal-desc');
+  desc.textContent = `"${newEntry.name}" 이름으로 등록된 참가자가 있지만 연락처 또는 이메일이 다릅니다. 동일인의 실수 입력일 수 있습니다. 처리 방식을 선택해 주세요.`;
+
+  const preview = document.getElementById('dup-new-preview');
+  preview.innerHTML = `
+    <div class="dup-card-name" style="margin-bottom:6px;">${newEntry.name} <span style="font-size:12px;color:var(--text3);">신규 입력</span></div>
+    <div class="dup-card-info">
+      <span class="dup-info-item">📱 ${newEntry.phone || '(없음)'}</span>
+      <span class="dup-info-item">✉️ ${newEntry.email || '(없음)'}</span>
+      <span class="dup-info-item">🎫 응모권 ${newEntry.tickets}장</span>
+    </div>`;
+
+  const cands = document.getElementById('dup-candidates');
+  cands.innerHTML = '';
+  suspects.forEach(s => {
+    const phoneDiff = s.phone !== newEntry.phone;
+    const emailDiff = s.email !== newEntry.email;
+    const card = document.createElement('div');
+    card.className = 'dup-card' + (s.id === _selectedDupId ? ' selected' : '');
+    card.id = 'dupcard-' + s.id;
+    card.onclick = () => selectDupCard(s.id);
+    card.innerHTML = `
+      <div class="dup-card-row">
+        <span class="dup-card-name">${s.name}</span>
+        <span class="dup-card-tickets">현재 ${s.tickets}회 응모</span>
+      </div>
+      <div class="dup-card-info">
+        <span class="dup-info-item ${phoneDiff?'diff':''}">📱 ${s.phone||'(없음)'}${phoneDiff?'<span class="dup-diff-badge">다름</span>':''}</span>
+        <span class="dup-info-item ${emailDiff?'diff':''}">✉️ ${s.email||'(없음)'}${emailDiff?'<span class="dup-diff-badge">다름</span>':''}</span>
+      </div>`;
+    cands.appendChild(card);
+  });
+
+  // 버튼 라벨 갱신
+  updateDupMergeBtn();
+  document.getElementById('dup-modal').classList.remove('hidden');
+}
+
+function selectDupCard(id) {
+  _selectedDupId = id;
+  document.querySelectorAll('.dup-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('dupcard-' + id);
+  if (card) card.classList.add('selected');
+  updateDupMergeBtn();
+}
+
+function updateDupMergeBtn() {
+  const btn = document.getElementById('dup-btn-merge');
+  if (!btn || !_selectedDupId) return;
+  const sel = entries.find(e => e.id === _selectedDupId);
+  if (sel) btn.textContent = `"${sel.name}" 에 응모권 합산`;
+}
+
+function dupConfirm(action) {
+  document.getElementById('dup-modal').classList.add('hidden');
+  if (action === 'cancel') { _pendingEntry = null; return; }
+  if (action === 'merge' && _selectedDupId) {
+    const target = entries.find(e => e.id === _selectedDupId);
+    if (target) { target.tickets += _pendingEntry.tickets; showToast(`${target.name} 응모권 합산 → ${target.tickets}회`); }
+  } else if (action === 'add') {
+    entries.push(_pendingEntry);
+    showToast(`${_pendingEntry.name} 별도 신규 등록 완료`);
+  }
+  _pendingEntry = null;
+  renderEntries();
+}
+
+// ── Entries ───────────────────────────────────────────────
+function addEntry() {
+  const name = document.getElementById('inp-name').value.trim();
+  const phone = document.getElementById('inp-phone').value.trim();
+  const email = document.getElementById('inp-email').value.trim();
+  const eventName = (document.getElementById('event-name-entry').value || document.getElementById('event-name').value || '').trim();
+  if (!name) { alert('이름을 입력해주세요'); return; }
+
+  // 행사명이 있으면 같은 행사 내에서만 합산, 없으면 행사 무관 합산
+  const exactDup = eventName
+    ? entries.find(e => e.name===name && e.phone===phone && e.email===email && e.eventName===eventName)
+    : entries.find(e => e.name===name && e.phone===phone && e.email===email && !e.eventName);
+
+  if (exactDup) {
+    exactDup.tickets += 1;
+    showToast(`${name}${eventName ? ' ['+eventName+']' : ''} 응모권 합산 → ${exactDup.tickets}회`);
+    ['inp-name','inp-phone','inp-email'].forEach(id => document.getElementById(id).value = '');
+    renderEntries();
+    return;
+  }
+
+  // 이름만 같고 연락처/이메일 다름 → 의심 모달
+  const suspects = findSameName(name).filter(e => isSuspect(e, {name, phone, email}));
+  if (suspects.length) {
+    const newEntry = { id: idCounter++, name, phone, email, tickets: 1, eventName };
+    ['inp-name','inp-phone','inp-email'].forEach(id => document.getElementById(id).value = '');
+    showDupModal(newEntry, suspects);
+    return;
+  }
+
+  // 신규 등록
+  entries.push({ id: idCounter++, name, phone, email, tickets: 1, eventName });
+  ['inp-name','inp-phone','inp-email'].forEach(id => document.getElementById(id).value = '');
+  renderEntries();
+}
+
+function changeTickets(id, d) {
+  const e = entries.find(x => x.id===id);
+  if (e) { e.tickets = Math.max(1, e.tickets+d); renderEntries(); }
+}
+function removeEntry(id) { entries = entries.filter(x => x.id!==id); renderEntries(); }
+function clearAll() { if (!confirm('전체 삭제하시겠습니까?')) return; entries = []; renderEntries(); }
+function totalTickets() { return entries.reduce((s,e) => s+e.tickets, 0); }
+
+function renderEntries() {
+  const body = document.getElementById('ticket-body');
+  const total = totalTickets();
+  document.getElementById('stat-people').textContent = entries.length;
+  document.getElementById('stat-tickets').textContent = total;
+  document.getElementById('h-people').textContent = entries.length;
+  document.getElementById('h-tickets').textContent = total;
+  const maxE = entries.length ? entries.reduce((a,b) => a.tickets>b.tickets?a:b) : null;
+  document.getElementById('stat-max').textContent = maxE ? `${maxE.name} (${maxE.tickets}장)` : '-';
+  body.innerHTML = '';
+  if (!entries.length) { body.innerHTML = '<div class="empty-state"><div class="empty-icon">🎫</div>등록된 응모권이 없습니다</div>'; return; }
+
+  // 행사명 → 이름 순으로 정렬
+  const sorted = [...entries].sort((a, b) => {
+    const ea = a.eventName || '', eb = b.eventName || '';
+    if (ea !== eb) return ea.localeCompare(eb, 'ko');
+    return a.name.localeCompare(b.name, 'ko');
+  });
+
+  sorted.forEach((e, i) => {
+    const row = document.createElement('div');
+    row.className = 'ticket-row' + (e.suspect ? ' suspect-row' : '');
+    if (e.suspect) row.style.cssText = 'background:rgba(255,170,71,0.04);border-left:2px solid rgba(255,170,71,0.4);';
+    const suspectBtn = e.suspect
+      ? `<span class="suspect-badge" onclick="reviewSuspect(${e.id})" title="중복 의심 — 클릭하여 처리">⚠️ 의심</span>`
+      : '';
+    const eventTag = e.eventName
+      ? `<span style="font-size:11px;color:var(--text3);background:var(--bg3);border:0.5px solid var(--border);padding:2px 7px;border-radius:10px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;" title="${e.eventName}">${e.eventName}</span>`
+      : `<span style="font-size:11px;color:var(--text3);">-</span>`;
+    row.innerHTML = `<span class="ticket-num">${i+1}</span><span class="ticket-name">${e.name}${suspectBtn}</span><span class="ticket-info">${e.phone||'-'}</span><span class="ticket-info">${e.email||'-'}</span><span>${eventTag}</span><span class="ticket-count"><button class="tc-btn" onclick="changeTickets(${e.id},-1)">−</button><span class="count-val">${e.tickets}</span><button class="tc-btn" onclick="changeTickets(${e.id},1)">+</button></span><button class="btn danger" style="font-size:12px;padding:4px 8px;" onclick="removeEntry(${e.id})">삭제</button>`;
+    body.appendChild(row);
+  });
+}
+
+function reviewSuspect(id) {
+  const target = entries.find(e => e.id === id);
+  if (!target) return;
+  const suspects = findSameName(target.name).filter(e => e.id !== id);
+  if (!suspects.length) { target.suspect = false; renderEntries(); return; }
+  // 모달을 열어 기존 항목들과 비교
+  _pendingEntry = { ...target, tickets: target.tickets };
+  // 실제로는 이 항목을 합산 후 제거하거나 그대로 유지하는 방식
+  const desc = document.getElementById('dup-modal-desc');
+  desc.textContent = `"${target.name}" 이름으로 등록된 다른 참가자가 있습니다. 동일인일 경우 아래에서 선택 후 합산하거나, 별도 참가자로 유지할 수 있습니다.`;
+  const preview = document.getElementById('dup-new-preview');
+  preview.innerHTML = `
+    <div class="dup-card-name" style="margin-bottom:6px;">${target.name} <span style="font-size:12px;color:#ffaa47;">⚠️ 의심 항목</span></div>
+    <div class="dup-card-info">
+      <span class="dup-info-item">📱 ${target.phone||'(없음)'}</span>
+      <span class="dup-info-item">✉️ ${target.email||'(없음)'}</span>
+      <span class="dup-info-item">🎫 응모권 ${target.tickets}장</span>
+    </div>`;
+  const cands = document.getElementById('dup-candidates');
+  cands.innerHTML = '';
+  _selectedDupId = suspects[0].id;
+  suspects.forEach(s => {
+    const phoneDiff = s.phone !== target.phone;
+    const emailDiff = s.email !== target.email;
+    const card = document.createElement('div');
+    card.className = 'dup-card' + (s.id === _selectedDupId ? ' selected' : '');
+    card.id = 'dupcard-' + s.id;
+    card.onclick = () => selectDupCard(s.id);
+    card.innerHTML = `
+      <div class="dup-card-row"><span class="dup-card-name">${s.name}</span><span class="dup-card-tickets">현재 ${s.tickets}회 응모</span></div>
+      <div class="dup-card-info">
+        <span class="dup-info-item ${phoneDiff?'diff':''}">📱 ${s.phone||'(없음)'}${phoneDiff?'<span class="dup-diff-badge">다름</span>':''}</span>
+        <span class="dup-info-item ${emailDiff?'diff':''}">✉️ ${s.email||'(없음)'}${emailDiff?'<span class="dup-diff-badge">다름</span>':''}</span>
+      </div>`;
+    cands.appendChild(card);
+  });
+  // 합산 시 의심 항목 제거 후 대상에 합산
+  document.getElementById('dup-btn-merge').onclick = () => {
+    const sel = entries.find(e => e.id === _selectedDupId);
+    if (sel) { sel.tickets += target.tickets; entries.splice(entries.findIndex(e=>e.id===id),1); showToast(`${sel.name} 에 응모권 합산 → ${sel.tickets}회`); }
+    document.getElementById('dup-modal').classList.add('hidden');
+    renderEntries();
+  };
+  // 별도 유지 시 의심 해제
+  document.querySelector('.modal-actions .btn.ghost').onclick = () => {
+    target.suspect = false;
+    document.getElementById('dup-modal').classList.add('hidden');
+    renderEntries();
+  };
+  updateDupMergeBtn();
+  document.getElementById('dup-modal').classList.remove('hidden');
+}
+
+// ── Confetti ──────────────────────────────────────────────
+function launchConfetti() {
+  const colors = ['#e8ff47','#47ff8a','#ff4d4d','#47b8ff','#ff47e8','#ffffff'];
+  for (let i = 0; i < 80; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div'); el.className = 'confetti-piece';
+      el.style.cssText = `left:${Math.random()*100}vw;top:-10px;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${1.5+Math.random()*1.5}s;transform:rotate(${Math.random()*360}deg);width:${6+Math.random()*6}px;height:${6+Math.random()*6}px;`;
+      document.body.appendChild(el); setTimeout(() => el.remove(), 3500);
+    }, i * 30);
+  }
+}
+
+// ── History ───────────────────────────────────────────────
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const countEl = document.getElementById('history-count');
+  list.innerHTML = '';
+  if (!history.length) { list.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div>추첨 기록이 없습니다</div>'; countEl.textContent = '기록 없음'; return; }
+  countEl.textContent = `총 ${history.length}회 추첨`;
+  history.forEach(h => {
+    const item = document.createElement('div'); item.className = 'history-item';
+    item.innerHTML = `<div class="history-meta"><span class="history-ts">${h.ts}</span><span class="history-badge">${h.mode==='top'?'🏆 응모순':'🎲 랜덤'}</span><span class="history-badge">${h.eventName}</span><span class="history-badge">참가자 ${h.total}명</span><span class="history-badge">당첨자 ${h.winners.length}명</span></div><div class="history-winners">${h.winners.map((w,i) => `<span class="history-chip">${i+1}위 ${maskName(w.name)} (${w.tickets}회)</span>`).join('')}</div>`;
+    list.appendChild(item);
+  });
+}
+
+function clearHistory() { if (!confirm('기록을 모두 삭제하시겠습니까?')) return; history = []; document.getElementById('h-draws').textContent = 0; renderHistory(); }
+
+// ── Tab switch ────────────────────────────────────────────
+function switchTab(name) {
+  const names = ['entry','draw','history'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
+  document.querySelectorAll('.panel').forEach((p,i) => p.classList.toggle('active', names[i]===name));
+  if (name==='history') renderHistory();
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────
+document.getElementById('inp-name').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('inp-phone').focus(); });
+document.getElementById('inp-phone').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('inp-email').focus(); });
+document.getElementById('inp-email').addEventListener('keydown', e => { if(e.key==='Enter') addEntry(); });
+
+// ── Init ──────────────────────────────────────────────────
+addSlot();
+renderEntries();
+</script>
+</body>
+</html>

@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>해외 주소 검증 — DHL / FedEx</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:       #0a0b0d;
+  --bg2:      #111316;
+  --bg3:      #181b1f;
+  --bg4:      #1f2328;
+  --bg5:      #252a30;
+  --border:   #252a30;
+  --border2:  #343a42;
+  --text:     #e2e8f0;
+  --text2:    #8b95a1;
+  --text3:    #4a5568;
+  --accent:   #38bdf8;
+  --accent2:  #0ea5e9;
+  --accent-d: rgba(56,189,248,0.1);
+  --accent-d2:rgba(56,189,248,0.05);
+  --green:    #4ade80;
+  --green-d:  rgba(74,222,128,0.1);
+  --red:      #f87171;
+  --red-d:    rgba(248,113,113,0.1);
+  --amber:    #fbbf24;
+  --amber-d:  rgba(251,191,36,0.1);
+  --purple:   #c084fc;
+  --purple-d: rgba(192,132,252,0.1);
+  --dhl:      #FFCC00;
+  --dhl-d:    rgba(255,204,0,0.1);
+  --fedex-p:  #4D148C;
+  --fedex-o:  #FF6600;
+  --fedex-d:  rgba(255,102,0,0.1);
+  --r: 8px;
+  --rl: 12px;
+  --rxl: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── LAYOUT ── */
+.wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+/* ── TOPBAR ── */
+.topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.02em;
+}
+.logo-chip {
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+.topbar-carriers {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.carrier-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-family: 'DM Mono', monospace;
+}
+.chip-dhl { background: var(--dhl-d); color: var(--dhl); border: 1px solid rgba(255,204,0,0.2); }
+.chip-fedex { background: var(--fedex-d); color: var(--fedex-o); border: 1px solid rgba(255,102,0,0.2); }
+.topbar-key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  font-size: 12px;
+}
+.topbar-key input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  width: 240px;
+}
+.topbar-key input::placeholder { color: var(--text3); }
+.key-label { color: var(--text3); font-size: 11px; white-space: nowrap; }
+
+/* ── MAIN ── */
+.main { padding: 28px 0 60px; }
+
+/* ── SECTION ── */
+.section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--bg4);
+  color: var(--accent);
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── UPLOAD ── */
+.upload-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--rl);
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.upload-zone:hover { border-color: var(--accent); background: var(--accent-d2); }
+.uz-icon { font-size: 28px; margin-bottom: 10px; }
+.uz-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.uz-sub { font-size: 12px; color: var(--text3); }
+
+/* ── ALERT ── */
+.alert {
+  padding: 10px 14px;
+  border-radius: var(--r);
+  font-size: 12px;
+  margin-bottom: 14px;
+  line-height: 1.7;
+  border-left: 3px solid;
+}
+.al-info { background: var(--accent-d); color: var(--accent); border-color: var(--accent); }
+.al-warn { background: var(--amber-d); color: var(--amber); border-color: var(--amber); }
+.al-ok   { background: var(--green-d);  color: var(--green); border-color: var(--green); }
+.al-err  { background: var(--red-d);    color: var(--red);   border-color: var(--red); }
+
+/* ── CARRIER TOGGLE ── */
+.carrier-toggle {
+  display: flex;
+  gap: 8px;
+}
+.ct-btn {
+  padding: 6px 14px;
+  border-radius: var(--r);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text3);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.05em;
+  transition: all 0.15s;
+}
+.ct-btn.active-dhl { background: var(--dhl-d); color: var(--dhl); border-color: rgba(255,204,0,0.4); }
+.ct-btn.active-fedex { background: var(--fedex-d); color: var(--fedex-o); border-color: rgba(255,102,0,0.4); }
+
+/* ── COLMAP ── */
+.colmap-grid {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 6px 12px;
+  align-items: center;
+  font-size: 12px;
+}
+.colmap-grid > span { color: var(--text2); }
+
+/* ── FORM ── */
+label { font-size: 11px; color: var(--text3); display: block; margin-bottom: 4px; font-weight: 500; }
+input, select, textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px;
+  padding: 8px 11px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-d);
+}
+select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234a5568' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+  -webkit-appearance: none;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  padding: 8px 16px; font-size: 13px;
+  font-family: 'Noto Sans KR', sans-serif; font-weight: 500;
+  border-radius: var(--r); cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid var(--border2);
+  background: var(--bg3); color: var(--text2);
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg4); color: var(--text); }
+.btn-accent { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+.btn-accent:hover { background: var(--accent2); }
+.btn-sm { padding: 5px 11px; font-size: 12px; }
+.btn-ghost { background: transparent; border-color: var(--border); color: var(--text3); }
+.btn-ghost:hover { color: var(--text); background: var(--bg3); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── TABLE ── */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th {
+  background: var(--bg3); padding: 8px 10px;
+  text-align: left; font-weight: 500; font-size: 10px;
+  color: var(--text3); border-bottom: 1px solid var(--border);
+  white-space: nowrap; letter-spacing: 0.04em; text-transform: uppercase;
+}
+td {
+  padding: 7px 10px; border-bottom: 1px solid var(--border);
+  vertical-align: top; color: var(--text2);
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg3); }
+.empty { text-align: center; color: var(--text3); padding: 2.5rem; font-style: italic; }
+
+/* ── ADDRESS CELL ── */
+.addr-raw { color: var(--text3); font-size: 11px; font-family: 'DM Mono', monospace; }
+.addr-clean {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--green); line-height: 1.8;
+}
+.addr-field { display: flex; flex-direction: column; gap: 1px; }
+.af-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; }
+.af-val { font-size: 12px; color: var(--text); }
+.af-val.missing { color: var(--red); font-style: italic; }
+.af-val.inferred { color: var(--amber); }
+
+/* ── STATUS BADGES ── */
+.bk { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 500; font-family: 'DM Mono', monospace; white-space: nowrap; }
+.b-ok     { background: var(--green-d);  color: var(--green); }
+.b-warn   { background: var(--amber-d);  color: var(--amber); }
+.b-err    { background: var(--red-d);    color: var(--red); }
+.b-info   { background: var(--accent-d); color: var(--accent); }
+.b-ai     { background: var(--purple-d); color: var(--purple); }
+.b-dhl    { background: var(--dhl-d);    color: var(--dhl); }
+.b-fedex  { background: var(--fedex-d);  color: var(--fedex-o); }
+
+/* ── PROGRESS ── */
+.progress-bar-wrap {
+  height: 3px;
+  background: var(--bg4);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--purple));
+  border-radius: 2px;
+  transition: width 0.4s ease;
+  width: 0%;
+}
+
+/* ── RESULT GRID ── */
+.result-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+.rcard {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--rl); padding: 14px; text-align: center;
+}
+.rcard-num { font-size: 26px; font-weight: 700; font-family: 'DM Mono', monospace; }
+.rcard-lbl { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.num-ok { color: var(--green); }
+.num-warn { color: var(--amber); }
+.num-err { color: var(--red); }
+.num-total { color: var(--accent); }
+
+/* ── INLINE EDIT ── */
+.inline-input {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 3px 6px;
+  outline: none;
+  width: 100%;
+}
+.inline-input:focus { border-color: var(--accent); }
+.edit-row { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+
+/* ── CARRIER FORMAT PANEL ── */
+.format-panel {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 16px;
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.fp-carrier { display: flex; flex-direction: column; gap: 8px; }
+.fp-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 4px; }
+.fp-field { display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.fp-field:last-child { border-bottom: none; }
+.fp-fname { color: var(--text3); font-family: 'DM Mono', monospace; }
+.fp-req { font-size: 9px; padding: 1px 5px; border-radius: 4px; }
+.fp-r { background: var(--red-d); color: var(--red); }
+.fp-o { background: var(--bg4); color: var(--text3); }
+
+/* ── SPINNER ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; vertical-align: -3px; margin-right: 6px; }
+
+/* ── GRID HELPERS ── */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.hidden { display: none !important; }
+
+/* ── FOOTER ROW ── */
+.foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+/* ── AI ANNOTATION ── */
+.ai-note { font-size: 10px; color: var(--purple); font-style: italic; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-chip">ADDR</div>
+    해외 주소 검증 시스템
+  </div>
+  <div class="topbar-carriers">
+    <div class="carrier-chip chip-dhl">DHL Express</div>
+    <div class="carrier-chip chip-fedex">FedEx</div>
+  </div>
+  <div class="topbar-key">
+    <span class="key-label">Anthropic API Key</span>
+    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+    <button class="btn btn-sm" onclick="testKey()" id="testKeyBtn">확인</button>
+  </div>
+</header>
+
+<div class="main">
+<div class="wrap">
+
+  <!-- CARRIER FORMAT INFO -->
+  <div class="format-panel">
+    <div class="fp-carrier">
+      <div class="fp-title" style="color:var(--dhl)">📦 DHL Express — 필수 필드</div>
+      <div class="fp-field"><span class="fp-fname">streetAddress</span><span class="fp-req fp-r">필수</span></div>
+      <div class="fp-field"><span class="fp-fname">addressLocality (city)</span><span class="fp-req fp-r">필수</span></div>
+      <div class="fp-field"><span class="fp-fname">countryCode (ISO 2)</span><span class="fp-req fp-r">필수</span></div>
+      <div class="fp-field"><span class="fp-fname">postalCode</span><span class="fp-req fp-r">국가별 필수</span></div>
+      <div class="fp-field"><span class="fp-fname">provinceCode</span><span class="fp-req fp-o">미국·캐나다 필수</span></div>
+    </div>
+    <div class="fp-carrier">
+      <div class="fp-title" style="color:var(--fedex-o)">📦 FedEx — 필수 필드</div>
+      <div class="fp-field"><span class="fp-fname">streetLines[0]</span><span class="fp-req fp-r">필수</span></div>
+      <div class="fp-field"><span class="fp-fname">city</span><span class="fp-req fp-r">필수</span></div>
+      <div class="fp-field"><span class="fp-fname">countryCode (ISO 2)</span><span class="fp-req fp-r">필수</span></div>
+      <div class="fp-field"><span class="fp-fname">postalCode</span><span class="fp-req fp-r">국가별 필수</span></div>
+      <div class="fp-field"><span class="fp-fname">stateOrProvinceCode</span><span class="fp-req fp-r">미국·캐나다·멕시코 필수</span></div>
+    </div>
+  </div>
+
+  <!-- STEP 1: UPLOAD -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">
+        <div class="step-num">1</div>
+        주문 엑셀 업로드
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:var(--text3)">배송사:</span>
+        <div class="carrier-toggle">
+          <button class="ct-btn active-dhl" id="ct-dhl" onclick="setCarrier('dhl')">DHL</button>
+          <button class="ct-btn" id="ct-fedex" onclick="setCarrier('fedex')">FedEx</button>
+          <button class="ct-btn" id="ct-both" onclick="setCarrier('both')">둘 다</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert al-info">
+      해외 고객 주소가 포함된 주문 엑셀을 업로드하세요. AI가 각 주소를 분석해 <strong>street, city, state/province, postal code, country</strong>로 분리하고 영문 표준 형식으로 정제합니다.
+    </div>
+
+    <div class="upload-zone" onclick="document.getElementById('fu').click()">
+      <div class="uz-icon">📂</div>
+      <div class="uz-title">클릭하여 .xlsx 또는 .csv 업로드</div>
+      <div class="uz-sub">해외 주소가 포함된 주문 파일</div>
+    </div>
+    <input type="file" id="fu" accept=".xlsx,.csv" class="hidden" onchange="handleFile(event)">
+  </div>
+
+  <!-- STEP 2: COLMAP -->
+  <div id="sec-colmap" class="section hidden">
+    <div class="section-head">
+      <div class="section-title"><div class="step-num">2</div>컬럼 매핑</div>
+      <button class="btn btn-accent" onclick="startValidation()">AI 주소 검증 시작 →</button>
+    </div>
+    <div class="alert al-warn">자동 인식된 매핑입니다. 주소 컬럼을 정확히 선택해야 AI가 올바르게 분석합니다.</div>
+    <div class="colmap-grid" id="colmap-ui"></div>
+  </div>
+
+  <!-- STEP 3: PROGRESS -->
+  <div id="sec-progress" class="section hidden">
+    <div class="section-head">
+      <div class="section-title"><div class="step-num">3</div>AI 주소 분석 중</div>
+      <span id="prog-label" style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace"></span>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="prog-bar"></div></div>
+    <div id="prog-log" style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;max-height:80px;overflow-y:auto;line-height:2"></div>
+  </div>
+
+  <!-- STEP 4: RESULT -->
+  <div id="sec-result" class="section hidden">
+    <div class="section-head">
+      <div class="section-title"><div class="step-num">4</div>검증 결과</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="revalidateFailed()">오류 항목만 재검증</button>
+        <button class="btn btn-accent" onclick="exportResult()">엑셀 다운로드 ↗</button>
+      </div>
+    </div>
+
+    <div class="result-cards" id="result-summary"></div>
+
+    <div class="tbl-wrap">
+      <table id="result-table">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>수령자명</th>
+            <th>원본 주소</th>
+            <th>Street Line 1</th>
+            <th>Street Line 2</th>
+            <th>City</th>
+            <th>State/Province</th>
+            <th>Postal Code</th>
+            <th>Country Code</th>
+            <th>DHL</th>
+            <th>FedEx</th>
+            <th>AI 메모</th>
+          </tr>
+        </thead>
+        <tbody id="result-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+let carrier = 'dhl';
+let rawH = [], rawR = [], orders = [], results = [];
+
+/* ── CARRIER ── */
+function setCarrier(c) {
+  carrier = c;
+  document.getElementById('ct-dhl').className = 'ct-btn' + (c==='dhl'||c==='both' ? ' active-dhl':'');
+  document.getElementById('ct-fedex').className = 'ct-btn' + (c==='fedex'||c==='both' ? ' active-fedex':'');
+  document.getElementById('ct-both').className = 'ct-btn' + (c==='both' ? ' active-dhl':'');
+}
+
+/* ── API KEY TEST ── */
+async function testKey() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { alert('API 키를 입력해주세요'); return; }
+  const btn = document.getElementById('testKeyBtn');
+  btn.disabled = true; btn.textContent = '확인 중...';
+  try {
+    const res = await callClaude(key, [{ role:'user', content:'say ok' }], 10);
+    btn.textContent = '✓ 연결됨';
+    btn.style.color = 'var(--green)';
+  } catch(e) {
+    btn.textContent = '✗ 오류';
+    btn.style.color = 'var(--red)';
+    alert('API 키 오류: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = '확인'; btn.style.color = ''; }, 3000);
+  }
+}
+
+/* ── CLAUDE API ── */
+async function callClaude(apiKey, messages, maxTokens = 500, system = '') {
+  const body = { model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, messages };
+  if (system) body.system = system;
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content.map(b => b.text || '').join('');
+}
+
+/* ── FILE UPLOAD ── */
+const FA = {
+  name:    ['수령자명','받는사람','recipient','receiver','수령자','이름','name'],
+  phone:   ['연락처','전화번호','phone','tel'],
+  address: ['주소','address','배송지','배송주소','addr'],
+  country: ['국가','country','나라'],
+};
+function guessCol(headers, field) {
+  for (const h of headers)
+    for (const a of FA[field]||[])
+      if (String(h).toLowerCase().replace(/\s/g,'').includes(a.toLowerCase().replace(/\s/g,''))) return h;
+  return '';
+}
+
+function handleFile(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+      rawH = rows[0]||[];
+      rawR = rows.slice(1).filter(r => r && r.some(c => c !== undefined && c !== ''));
+      buildColMap();
+    } catch(err) { alert('파일 오류: '+err.message); }
+  };
+  r.readAsBinaryString(f); e.target.value = '';
+}
+
+function buildColMap() {
+  document.getElementById('sec-colmap').classList.remove('hidden');
+  const opts = ['(없음)',...rawH].map(h=>`<option value="${esc(String(h))}">${esc(String(h))}</option>`).join('');
+  const fields = [
+    {k:'name',l:'수령자명'},
+    {k:'phone',l:'연락처 (선택)'},
+    {k:'address',l:'주소 ★ 필수'},
+    {k:'country',l:'국가 (별도 컬럼 있으면)'},
+  ];
+  document.getElementById('colmap-ui').innerHTML = fields.map(f => {
+    const g = guessCol(rawH, f.k);
+    const sel = opts.replace(`value="${esc(g)}"`, `value="${esc(g)}" selected`);
+    return `<span>${f.l}</span><select id="cm-${f.k}">${sel}</select>`;
+  }).join('');
+}
+
+function getColVal(row, field) {
+  const col = document.getElementById('cm-'+field)?.value;
+  if (!col || col === '(없음)') return '';
+  const idx = rawH.indexOf(col);
+  return idx >= 0 ? String(row[idx] ?? '').trim() : '';
+}
+
+/* ── VALIDATION ── */
+async function startValidation() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { alert('상단에 Anthropic API 키를 입력해주세요'); return; }
+
+  orders = rawR.map((row, i) => ({
+    idx: i+1,
+    name: getColVal(row, 'name'),
+    phone: getColVal(row, 'phone'),
+    rawAddress: getColVal(row, 'address'),
+    rawCountry: getColVal(row, 'country'),
+  })).filter(o => o.rawAddress);
+
+  if (!orders.length) { alert('주소 데이터가 없습니다. 컬럼 매핑을 확인해주세요'); return; }
+
+  results = orders.map(o => ({ ...o, status: 'pending', parsed: null, note: '' }));
+
+  document.getElementById('sec-progress').classList.remove('hidden');
+  document.getElementById('sec-result').classList.add('hidden');
+  document.getElementById('result-tbody').innerHTML = '';
+
+  await runValidation(key, results);
+}
+
+async function revalidateFailed() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { alert('API 키를 입력해주세요'); return; }
+  const failedIdx = results.map((r,i) => r.status !== 'ok' ? i : -1).filter(i => i >= 0);
+  if (!failedIdx.length) { alert('오류 항목이 없습니다'); return; }
+  document.getElementById('sec-progress').classList.remove('hidden');
+  const sub = failedIdx.map(i => results[i]);
+  await runValidation(key, sub, failedIdx);
+}
+
+async function runValidation(key, targets, originalIndices = null) {
+  const total = targets.length;
+  const progBar = document.getElementById('prog-bar');
+  const progLabel = document.getElementById('prog-label');
+  const progLog = document.getElementById('prog-log');
+  progBar.style.width = '0%';
+  progLog.innerHTML = '';
+
+  const SYSTEM = `You are an international address parsing and standardization expert for DHL Express and FedEx shipping.
+
+Your job: parse any address input (in any language) and return a structured JSON with these exact fields:
+{
+  "streetLine1": "primary street address in English",
+  "streetLine2": "apartment/unit/floor etc in English (empty string if none)",
+  "city": "city name in English",
+  "stateProvince": "state or province code (2-letter ISO for US/CA/MX, full name for others, empty if not applicable)",
+  "postalCode": "postal/ZIP code (digits only for countries that use digits)",
+  "countryCode": "ISO 3166-1 alpha-2 country code (2 letters, uppercase)",
+  "countryName": "full country name in English",
+  "dhlReady": true/false,
+  "fedexReady": true/false,
+  "issues": ["list of issues found"],
+  "inferredFields": ["list of fields you inferred/guessed"],
+  "confidence": "high/medium/low",
+  "note": "brief explanation in Korean of what was done"
+}
+
+Rules:
+- Translate ALL non-English text to English standard postal format
+- Infer missing fields from context (e.g. infer country from city name, infer state from city+country)
+- postalCode: use "" if the country doesn't use postal codes (e.g. Hong Kong)
+- stateProvince: REQUIRED for US (2-letter), Canada (2-letter), Mexico (2-letter). Optional for others.
+- dhlReady: true only if streetLine1, city, countryCode are all present
+- fedexReady: true only if streetLine1, city, countryCode are all present AND stateProvince is present for US/CA/MX
+- Return ONLY valid JSON, no markdown, no explanation outside JSON`;
+
+  for (let i = 0; i < total; i++) {
+    const target = targets[i];
+    const realIdx = originalIndices ? originalIndices[i] : i;
+
+    const pct = Math.round((i / total) * 100);
+    progBar.style.width = pct + '%';
+    progLabel.textContent = `${i+1} / ${total}`;
+    progLog.innerHTML += `<div>→ [${target.idx}] ${target.name || '(이름없음)'}: ${target.rawAddress.slice(0,50)}...</div>`;
+    progLog.scrollTop = progLog.scrollHeight;
+
+    const prompt = `Parse and standardize this international shipping address for ${carrier === 'both' ? 'DHL Express and FedEx' : carrier.toUpperCase()}.
+
+Recipient name: ${target.name || 'unknown'}
+Raw address input: ${target.rawAddress}
+${target.rawCountry ? 'Country hint: ' + target.rawCountry : ''}
+
+Return JSON only.`;
+
+    try {
+      const resp = await callClaude(key, [{role:'user', content: prompt}], 600, SYSTEM);
+      const clean = resp.replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(clean);
+      results[realIdx] = { ...target, status: parsed.dhlReady || parsed.fedexReady ? 'ok' : 'warn', parsed, note: parsed.note || '' };
+      if (parsed.issues && parsed.issues.length) results[realIdx].status = 'warn';
+      if (!parsed.dhlReady && !parsed.fedexReady) results[realIdx].status = 'err';
+    } catch(err) {
+      results[realIdx] = { ...target, status: 'err', parsed: null, note: '파싱 실패: ' + err.message };
+    }
+
+    // small delay to avoid rate limiting
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  progBar.style.width = '100%';
+  progLabel.textContent = '완료!';
+  renderResults();
+  document.getElementById('sec-progress').classList.add('hidden');
+  document.getElementById('sec-result').classList.remove('hidden');
+  document.getElementById('sec-result').scrollIntoView({behavior:'smooth'});
+}
+
+/* ── RENDER RESULTS ── */
+function renderResults() {
+  const ok   = results.filter(r => r.status === 'ok').length;
+  const warn = results.filter(r => r.status === 'warn').length;
+  const err  = results.filter(r => r.status === 'err' || r.status === 'pending').length;
+
+  document.getElementById('result-summary').innerHTML = `
+    <div class="rcard"><div class="rcard-num num-total">${results.length}</div><div class="rcard-lbl">전체</div></div>
+    <div class="rcard"><div class="rcard-num num-ok">${ok}</div><div class="rcard-lbl">검증 완료</div></div>
+    <div class="rcard"><div class="rcard-num num-warn">${warn}</div><div class="rcard-lbl">주의 (확인 필요)</div></div>
+    <div class="rcard"><div class="rcard-num num-err">${err}</div><div class="rcard-lbl">오류</div></div>
+  `;
+
+  document.getElementById('result-tbody').innerHTML = results.map((r, ri) => {
+    const p = r.parsed;
+    const statusBadge = r.status === 'ok'
+      ? '<span class="bk b-ok">완료</span>'
+      : r.status === 'warn'
+      ? '<span class="bk b-warn">주의</span>'
+      : '<span class="bk b-err">오류</span>';
+
+    const dhlBadge = p?.dhlReady
+      ? '<span class="bk b-dhl">✓ DHL</span>'
+      : '<span class="bk b-err">✗ DHL</span>';
+    const fedexBadge = p?.fedexReady
+      ? '<span class="bk b-fedex">✓ FedEx</span>'
+      : '<span class="bk b-err">✗ FedEx</span>';
+
+    const confBadge = p ? `<span class="bk b-ai">${p.confidence}</span>` : '';
+    const inferred = p?.inferredFields?.length ? `<div class="ai-note">추론: ${p.inferredFields.join(', ')}</div>` : '';
+    const issues = p?.issues?.length ? `<div style="color:var(--amber);font-size:10px;margin-top:3px">${p.issues.join(' · ')}</div>` : '';
+
+    const makeEdit = (field, val, inferred) => `
+      <div class="edit-row">
+        <input class="inline-input ${inferred?'inferred-field':''}"
+          value="${esc(val||'')}"
+          style="${inferred?'border-color:var(--amber);color:var(--amber);':''}"
+          onchange="updateField(${ri},'${field}',this.value)"
+          placeholder="${val?'':'-'}">
+      </div>`;
+
+    const inf = p?.inferredFields || [];
+
+    return `<tr>
+      <td style="text-align:center;font-family:'DM Mono',monospace;color:var(--text3)">${r.idx}</td>
+      <td style="font-weight:500;white-space:nowrap">${r.name||'-'}</td>
+      <td>
+        <div class="addr-raw" style="max-width:180px;word-break:break-all">${r.rawAddress}</div>
+        ${statusBadge}
+      </td>
+      <td>${p ? makeEdit(ri+'_sl1', p.streetLine1, inf.includes('streetLine1')) : '-'}</td>
+      <td>${p ? makeEdit(ri+'_sl2', p.streetLine2, false) : '-'}</td>
+      <td>${p ? makeEdit(ri+'_city', p.city, inf.includes('city')) : '-'}</td>
+      <td>${p ? makeEdit(ri+'_sp', p.stateProvince, inf.includes('stateProvince')) : '-'}</td>
+      <td>${p ? makeEdit(ri+'_zip', p.postalCode, inf.includes('postalCode')) : '-'}</td>
+      <td>${p ? makeEdit(ri+'_cc', p.countryCode, inf.includes('countryCode')) : '-'}</td>
+      <td>${dhlBadge}</td>
+      <td>${fedexBadge}</td>
+      <td>
+        ${confBadge}
+        ${inferred}
+        ${issues}
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">${r.note||''}</div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="12" class="empty">결과 없음</td></tr>';
+}
+
+function updateField(ri, field, val) {
+  if (!results[ri].parsed) return;
+  const map = { sl1:'streetLine1', sl2:'streetLine2', city:'city', sp:'stateProvince', zip:'postalCode', cc:'countryCode' };
+  const fkey = field.split('_').slice(1).join('_');
+  const pkey = map[fkey];
+  if (pkey) {
+    results[ri].parsed[pkey] = val;
+    // re-evaluate readiness
+    const p = results[ri].parsed;
+    p.dhlReady = !!(p.streetLine1 && p.city && p.countryCode);
+    const needsState = ['US','CA','MX'].includes(p.countryCode?.toUpperCase());
+    p.fedexReady = !!(p.streetLine1 && p.city && p.countryCode && (!needsState || p.stateProvince));
+    results[ri].status = p.dhlReady || p.fedexReady ? 'ok' : 'err';
+  }
+}
+
+/* ── EXPORT ── */
+function exportResult() {
+  if (!results.length) { alert('결과가 없습니다'); return; }
+  const hdr = [
+    'No','수령자명','연락처','원본주소',
+    'Street Line 1','Street Line 2','City','State/Province','Postal Code','Country Code','Country',
+    'DHL 준비','FedEx 준비','신뢰도','AI 메모','이슈','추론된 필드'
+  ];
+  const data = results.map(r => {
+    const p = r.parsed;
+    return [
+      r.idx, r.name||'', r.phone||'', r.rawAddress,
+      p?.streetLine1||'', p?.streetLine2||'', p?.city||'',
+      p?.stateProvince||'', p?.postalCode||'', p?.countryCode||'', p?.countryName||'',
+      p?.dhlReady ? 'Y' : 'N', p?.fedexReady ? 'Y' : 'N',
+      p?.confidence||'', r.note||'',
+      (p?.issues||[]).join('; '),
+      (p?.inferredFields||[]).join(', ')
+    ];
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([hdr, ...data]);
+  ws['!cols'] = [4,12,13,28,26,18,14,12,10,8,14,6,6,6,24,22,20].map(w=>({wch:w}));
+
+  // Color-code status
+  results.forEach((r, i) => {
+    const rowIdx = i + 2;
+    const dhlCell = XLSX.utils.encode_cell({r: rowIdx-1, c: 11});
+    const fxCell  = XLSX.utils.encode_cell({r: rowIdx-1, c: 12});
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '해외주소검증결과');
+
+  // DHL format sheet
+  const dhlHdr = ['수령자명','연락처','streetAddress','addressLocality','stateCode','postalCode','countryCode'];
+  const dhlData = results.filter(r=>r.parsed?.dhlReady).map(r=>{
+    const p=r.parsed;
+    const street = [p.streetLine1, p.streetLine2].filter(Boolean).join(', ');
+    return [r.name||'', r.phone||'', street, p.city, p.stateProvince||'', p.postalCode||'', p.countryCode];
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([dhlHdr,...dhlData]), 'DHL용');
+
+  // FedEx format sheet
+  const fxHdr = ['수령자명','연락처','streetLines','city','stateOrProvinceCode','postalCode','countryCode'];
+  const fxData = results.filter(r=>r.parsed?.fedexReady).map(r=>{
+    const p=r.parsed;
+    const street = [p.streetLine1, p.streetLine2].filter(Boolean).join(' | ');
+    return [r.name||'', r.phone||'', street, p.city, p.stateProvince||'', p.postalCode||'', p.countryCode];
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([fxHdr,...fxData]), 'FedEx용');
+
+  const d = new Date();
+  const ds = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `해외주소검증_${ds}.xlsx`);
+}
+
+/* ── UTILS ── */
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

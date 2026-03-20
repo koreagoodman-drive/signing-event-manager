@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ShipCorrect — 고속 주소 교정</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0f0f11;--sf:#17171a;--sf2:#1e1e22;--sf3:#26262c;
+  --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.15);
+  --tx:#f0efe8;--tx2:#9998a0;--tx3:#5a5960;
+  --dhl:#f5c842;--dhlD:rgba(245,200,66,.12);--dhlB:rgba(245,200,66,.28);
+  --fx:#4e8ef7;--fxD:rgba(78,142,247,.12);--fxB:rgba(78,142,247,.28);
+  --gr:#3ecf8e;--grD:rgba(62,207,142,.12);--grB:rgba(62,207,142,.28);
+  --re:#f56565;--reD:rgba(245,101,101,.1);
+  --am:#f5a742;--amD:rgba(245,167,66,.12);
+  --r:10px;--rl:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sb{width:220px;min-width:220px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:24px 0 20px;position:sticky;top:0;height:100vh;}
+.logo{padding:0 20px 20px;border-bottom:1px solid var(--bd);margin-bottom:16px;}
+.logo-m{font-family:'DM Serif Display',serif;font-size:20px;}
+.logo-s{font-size:10px;color:var(--tx3);letter-spacing:.1em;text-transform:uppercase;}
+.nav{padding:0 10px;flex:1;}
+.ns{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);padding:8px 10px 4px;}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;color:var(--tx2);font-size:13px;transition:all .12s;margin-bottom:1px;border:none;background:none;width:100%;text-align:left;}
+.ni:hover{background:var(--sf2);color:var(--tx);}
+.ni.on{background:var(--sf3);color:var(--tx);font-weight:500;}
+.ni svg{width:15px;height:15px;flex-shrink:0;opacity:.5;}
+.ni.on svg{opacity:1;}
+.sb-foot{padding:14px 20px 0;border-top:1px solid var(--bd);margin-top:10px;font-size:11px;color:var(--tx3);line-height:1.6;}
+
+/* MAIN */
+.main{flex:1;padding:36px 44px;overflow-y:auto;}
+.pg{display:none;max-width:1080px;}
+.pg.on{display:block;animation:fi .15s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.ph{margin-bottom:24px;}
+.ph h1{font-family:'DM Serif Display',serif;font-size:25px;letter-spacing:-.02em;margin-bottom:4px;}
+.ph p{color:var(--tx2);font-size:13px;}
+
+/* CARDS */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:20px;margin-bottom:12px;}
+.ct{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.ct::after{content:'';flex:1;height:1px;background:var(--bd);}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
+.f{display:flex;flex-direction:column;gap:4px;}
+.f label{font-size:11px;font-weight:500;color:var(--tx2);}
+.f input,.f select{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--r);padding:8px 11px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .12s;width:100%;}
+.f input:focus,.f select:focus{border-color:rgba(255,255,255,.3);}
+.f select option{background:var(--sf2);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--bd2);background:var(--sf2);color:var(--tx);transition:all .12s;white-space:nowrap;}
+.btn:hover{border-color:rgba(255,255,255,.25);background:var(--sf3);}
+.btn:active{transform:scale(.98);}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.bp{background:var(--tx);color:var(--bg);border-color:var(--tx);}
+.bp:hover{background:#d4d3cc;}
+.bg{background:var(--grD);color:var(--gr);border-color:var(--grB);}
+.bg:hover{background:rgba(62,207,142,.2);}
+.br{background:var(--reD);color:var(--re);border-color:rgba(245,101,101,.25);}
+.bsm{padding:5px 11px;font-size:12px;}
+.brow{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:12px;}
+
+/* CARRIER TOGGLE */
+.ctog{display:flex;gap:3px;background:var(--sf2);padding:3px;border-radius:var(--r);width:fit-content;margin-bottom:16px;}
+.ctb{padding:6px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--tx2);transition:all .12s;}
+.ctb.don{background:var(--dhlD);color:var(--dhl);}
+.ctb.fon{background:var(--fxD);color:var(--fx);}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+.bok{background:var(--grD);color:var(--gr);}
+.bwarn{background:var(--amD);color:var(--am);}
+.berr{background:var(--reD);color:var(--re);}
+.bload{background:var(--sf3);color:var(--tx2);}
+
+/* TIP */
+.tip{display:flex;align-items:flex-start;gap:8px;padding:9px 13px;border-radius:var(--r);font-size:12px;line-height:1.5;margin-bottom:16px;}
+.tdhl{background:var(--dhlD);color:#e8c040;border:1px solid var(--dhlB);}
+.tfx{background:var(--fxD);color:#7aaff9;border:1px solid var(--fxB);}
+.tinfo{background:var(--sf2);color:var(--tx2);border:1px solid var(--bd);}
+.tam{background:var(--amD);color:#e8a030;border:1px solid rgba(245,167,66,.25);}
+
+/* DROP ZONE */
+.dz{border:2px dashed var(--bd2);border-radius:var(--rl);padding:40px 20px;text-align:center;cursor:pointer;transition:all .18s;position:relative;overflow:hidden;}
+.dz:hover,.dz.ov{border-color:var(--gr);background:rgba(62,207,142,.04);}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;}
+.sc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:14px 16px;}
+.sc-l{font-size:11px;color:var(--tx3);margin-bottom:2px;}
+.sc-v{font-size:22px;font-weight:600;}
+
+/* PROGRESS */
+.pwrap{margin-bottom:10px;}
+.pmeta{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx3);margin-bottom:5px;}
+.ptrack{height:4px;background:var(--bd);border-radius:2px;overflow:hidden;}
+.pfill{height:100%;background:var(--gr);border-radius:2px;transition:width .25s ease;}
+
+/* SPEED BADGE */
+.speed-info{font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:6px;}
+.speed-num{color:var(--gr);font-weight:600;font-size:13px;}
+
+/* TABLE */
+.twrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--bd);}
+table.bt{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+table.bt th{background:var(--sf2);color:var(--tx3);font-weight:600;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:8px 9px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap;overflow:hidden;}
+table.bt td{padding:5px 8px;border-bottom:1px solid var(--bd);color:var(--tx);vertical-align:middle;overflow:hidden;}
+table.bt tr:last-child td{border-bottom:none;}
+table.bt tbody tr:hover td{background:rgba(255,255,255,.02);}
+table.bt td input{background:transparent;border:none;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;width:100%;padding:2px 2px;border-radius:3px;outline:none;}
+table.bt td input:focus{background:var(--sf3);outline:1px solid var(--bd2);}
+table.bt td input.iok{color:var(--gr);}
+table.bt td input.iinf{color:var(--am);}
+.rdot{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+.dok{background:var(--grD);color:var(--gr);}
+.dpd{background:var(--sf3);color:var(--tx3);}
+.derr{background:var(--reD);color:var(--re);}
+.dam{background:var(--amD);color:var(--am);}
+.del-btn{background:none;border:none;color:var(--tx3);cursor:pointer;padding:2px 5px;border-radius:3px;font-size:12px;line-height:1;transition:color .12s;}
+.del-btn:hover{color:var(--re);}
+
+/* VIRTUAL SCROLL */
+.vscroll-container{max-height:480px;overflow-y:auto;}
+.vscroll-container::-webkit-scrollbar{width:4px;}
+.vscroll-container::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px;}
+
+/* CSV PREVIEW */
+.cpre{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--r);padding:12px;font-family:'Courier New',monospace;font-size:11px;color:var(--tx2);overflow:auto;max-height:240px;white-space:pre;margin-top:10px;}
+
+/* RESULT BOX */
+.rbox{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--r);padding:14px;font-size:13px;line-height:1.7;color:var(--tx2);white-space:pre-wrap;min-height:70px;}
+.rbox.has{color:var(--tx);border-color:var(--bd2);}
+.cpanel{background:rgba(62,207,142,.04);border:1px solid var(--grB);border-radius:var(--rl);padding:16px;margin-top:12px;}
+
+/* TMPL */
+.tmpl{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--r);padding:12px 16px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.tmpl-i{font-size:12px;color:var(--tx2);line-height:1.6;}
+.tmpl-i strong{color:var(--tx);font-weight:500;}
+
+/* MAPPER */
+.mrow{display:grid;grid-template-columns:150px 22px 1fr;gap:7px;align-items:center;margin-bottom:6px;}
+.msel{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--r);padding:6px 9px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;width:100%;}
+
+/* LEGEND */
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx2);}
+.ld{width:9px;height:9px;border-radius:50%;}
+
+/* SPINNER */
+@keyframes sp{to{transform:rotate(360deg)}}
+.spin{width:12px;height:12px;border:2px solid rgba(255,255,255,.1);border-top-color:var(--tx2);border-radius:50%;animation:sp .6s linear infinite;display:inline-block;vertical-align:middle;}
+
+/* BATCH MODE INDICATOR */
+.batch-mode-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(62,207,142,.15);color:var(--gr);border:1px solid var(--grB);}
+
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px;}
+
+@media(max-width:768px){
+  .sb{display:none;}
+  .main{padding:18px 14px;}
+  .g2,.g3,.g4,.stats{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside class="sb">
+  <div class="logo">
+    <div class="logo-m">ShipCorrect</div>
+    <div class="logo-s">DHL · FedEx Address Tool</div>
+  </div>
+  <nav class="nav">
+    <div class="ns">주소 교정</div>
+    <button class="ni" onclick="go('upload')" id="ni-upload">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+      리스트 업로드
+    </button>
+    <button class="ni on" onclick="go('batch')" id="ni-batch">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+      교정 목록
+    </button>
+    <button class="ni" onclick="go('single')" id="ni-single">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+      단건 교정
+    </button>
+    <div class="ns" style="margin-top:8px;">출력</div>
+    <button class="ni" onclick="go('export')" id="ni-export">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+      송장 CSV 출력
+    </button>
+  </nav>
+  <div class="sb-foot">
+    Claude AI 기반 주소 교정<br/>
+    <strong style="color:var(--gr);">최대 20건 묶음 처리</strong>로 고속화<br/>
+    누락 필드 자동 추론 지원
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ===== UPLOAD ===== -->
+<div id="pg-upload" class="pg">
+  <div class="ph"><h1>리스트 업로드</h1><p>CSV 또는 Excel 파일을 업로드합니다. 도시·우편번호·국가가 없어도 AI가 자동 추론합니다</p></div>
+  <div class="card">
+    <div class="ct">템플릿 다운로드</div>
+    <div class="tmpl">
+      <div class="tmpl-i">
+        <strong>업로드 양식 템플릿</strong><br/>
+        필수: 수취인이름, 주소1 &nbsp;·&nbsp; 선택: 주소2, 도시, 주/도, 우편번호, 국가, 전화번호, 이메일<br/>
+        <span style="color:var(--am);font-size:11px;">★ 도시·주·우편번호·국가를 비워도 AI가 주소 텍스트에서 자동 추론합니다</span>
+      </div>
+      <div style="display:flex;gap:7px;flex-shrink:0;">
+        <button class="btn bsm" onclick="dlTmpl('csv')">CSV 템플릿</button>
+        <button class="btn bsm bg" onclick="dlTmpl('xlsx')">Excel 템플릿</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">파일 업로드</div>
+    <div class="dz" id="dz" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">
+      <input type="file" id="fi" accept=".csv,.xlsx,.xls" onchange="onFile(event)"/>
+      <div style="font-size:32px;margin-bottom:8px;">📂</div>
+      <div style="font-size:15px;font-weight:500;margin-bottom:3px;">드래그 또는 클릭하여 파일 선택</div>
+      <div style="font-size:12px;color:var(--tx3);">CSV · XLSX · XLS 지원 · 최대 5,000행</div>
+    </div>
+    <div id="ufb" style="margin-top:9px;min-height:20px;"></div>
+  </div>
+  <div id="map-card" class="card" style="display:none;">
+    <div class="ct">컬럼 매핑</div>
+    <div class="tip tinfo"><span>ℹ️</span><span id="map-info">컬럼을 매핑해주세요. 자동 감지된 항목은 이미 선택되어 있습니다.</span></div>
+    <div style="display:grid;grid-template-columns:150px 22px 1fr;gap:7px;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--bd);">
+      <span style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);">필드</span>
+      <span></span>
+      <span style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);" id="map-col-hdr">파일 컬럼</span>
+    </div>
+    <div id="map-grid"></div>
+    <div class="brow">
+      <button class="btn bp" onclick="doImport()">교정 목록에 추가</button>
+      <span id="import-st"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== BATCH ===== -->
+<div id="pg-batch" class="pg on">
+  <div class="ph"><h1>교정 목록</h1><p>AI가 최대 20건씩 묶어서 한 번에 교정합니다. 누락된 도시·주·우편번호·국가는 주소에서 자동 추론합니다</p></div>
+
+  <div class="stats">
+    <div class="sc"><div class="sc-l">전체</div><div class="sc-v" id="st-tot">0</div></div>
+    <div class="sc"><div class="sc-l">교정 완료</div><div class="sc-v" style="color:var(--gr)" id="st-ok">0</div></div>
+    <div class="sc"><div class="sc-l">AI 추론 포함</div><div class="sc-v" style="color:var(--am)" id="st-inf">0</div></div>
+    <div class="sc"><div class="sc-l">대기</div><div class="sc-v" style="color:var(--tx2)" id="st-pd">0</div></div>
+    <div class="sc"><div class="sc-l">오류</div><div class="sc-v" style="color:var(--re)" id="st-er">0</div></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <select id="bcarrier" style="background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--r);padding:7px 11px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+        <option value="dhl">DHL Express</option>
+        <option value="fedex">FedEx</option>
+      </select>
+
+      <!-- BATCH SIZE -->
+      <select id="bsize" style="background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--r);padding:7px 11px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;" title="한 번의 API 호출로 처리할 주소 수">
+        <option value="10">묶음 10건</option>
+        <option value="15" selected>묶음 15건 (권장)</option>
+        <option value="20">묶음 20건 (최고속)</option>
+      </select>
+
+      <!-- PARALLEL CALLS -->
+      <select id="bpar" style="background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--r);padding:7px 11px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;" title="동시 API 호출 수">
+        <option value="2">병렬 2</option>
+        <option value="3" selected>병렬 3 (권장)</option>
+        <option value="5">병렬 5</option>
+      </select>
+
+      <button class="btn bp" id="corr-btn" onclick="correctAll()">
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+        전체 AI 교정
+      </button>
+      <button class="btn" id="stop-btn" onclick="stopAll()" style="display:none;">⏹ 중단</button>
+      <button class="btn" onclick="addSamples()">샘플 추가</button>
+      <button class="btn br bsm" onclick="clearBatch()">초기화</button>
+      <span id="bst"></span>
+    </div>
+
+    <div id="pwrap" style="display:none;" class="pwrap">
+      <div class="pmeta">
+        <span id="plbl" style="display:flex;align-items:center;gap:8px;">
+          처리 중...
+          <span class="speed-info">처리 속도: <span class="speed-num" id="speed-val">—</span> 건/분</span>
+        </span>
+        <span style="display:flex;align-items:center;gap:10px;">
+          <span id="peta" style="font-size:11px;color:var(--tx3);"></span>
+          <span id="ppct">0%</span>
+        </span>
+      </div>
+      <div class="ptrack"><div class="pfill" id="pfill" style="width:0%"></div></div>
+    </div>
+
+    <div class="legend" style="margin-top:8px;">
+      <div class="li"><div class="ld" style="background:var(--gr)"></div>교정 완료</div>
+      <div class="li"><div class="ld" style="background:var(--am)"></div>AI 추론값 포함 (황색 = 확인 권장)</div>
+      <div class="li"><div class="ld" style="background:var(--tx3)"></div>대기</div>
+      <div class="li"><div class="ld" style="background:var(--re)"></div>오류</div>
+    </div>
+
+    <div class="twrap" style="margin-top:8px;">
+      <table class="bt">
+        <colgroup>
+          <col style="width:26px;"/>
+          <col style="width:110px;"/>
+          <col style="width:160px;"/>
+          <col style="width:90px;"/>
+          <col style="width:90px;"/>
+          <col style="width:55px;"/>
+          <col style="width:80px;"/>
+          <col style="width:42px;"/>
+          <col style="width:110px;"/>
+          <col style="width:60px;"/>
+          <col style="width:24px;"/>
+        </colgroup>
+        <thead>
+          <tr>
+            <th></th><th>수취인</th><th>주소 1</th><th>주소 2</th>
+            <th>도시</th><th>주/도</th><th>우편번호</th><th>국가</th>
+            <th>전화번호</th><th>상태</th><th></th>
+          </tr>
+        </thead>
+      </table>
+      <div class="vscroll-container" id="tbody-scroll">
+        <table class="bt" style="width:100%;">
+          <colgroup>
+            <col style="width:26px;"/>
+            <col style="width:110px;"/>
+            <col style="width:160px;"/>
+            <col style="width:90px;"/>
+            <col style="width:90px;"/>
+            <col style="width:55px;"/>
+            <col style="width:80px;"/>
+            <col style="width:42px;"/>
+            <col style="width:110px;"/>
+            <col style="width:60px;"/>
+            <col style="width:24px;"/>
+          </colgroup>
+          <tbody id="btbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SINGLE ===== -->
+<div id="pg-single" class="pg">
+  <div class="ph"><h1>단건 교정</h1><p>도시·우편번호·국가를 비워도 주소 텍스트에서 AI가 자동 추론합니다</p></div>
+  <div class="card">
+    <div class="ct">배송사</div>
+    <div class="ctog">
+      <button class="ctb don" id="ctb-d" onclick="setC('dhl')">DHL Express</button>
+      <button class="ctb" id="ctb-f" onclick="setC('fedex')">FedEx</button>
+    </div>
+    <div id="ctip" class="tip tdhl"><span>📦</span><span id="ctip-t">DHL: streetLines 최대 35자/2줄 · ISO 국가코드 2자리 · 누락 필드 자동 추론</span></div>
+  </div>
+  <div class="card">
+    <div class="ct">주소 입력</div>
+    <div style="display:grid;gap:10px;">
+      <div class="g2">
+        <div class="f"><label>수취인 이름</label><input id="fn" placeholder="John Smith"/></div>
+        <div class="f"><label>전화번호</label><input id="fp" placeholder="+1 555-123-4567"/></div>
+      </div>
+      <div class="f"><label>주소 1 (전체 주소를 여기에 입력해도 됩니다)</label><input id="fa1" placeholder="예: 10 Downing Street London SW1A 2AA UK"/></div>
+      <div class="f"><label>주소 2 (선택)</label><input id="fa2" placeholder="Apt 4B"/></div>
+      <div class="g3">
+        <div class="f"><label>도시 (비워도 추론)</label><input id="fc" placeholder="AI가 추론합니다"/></div>
+        <div class="f"><label>주/도 (비워도 추론)</label><input id="fs" placeholder="AI가 추론합니다"/></div>
+        <div class="f"><label>우편번호 (비워도 추론)</label><input id="fpo" placeholder="AI가 추론합니다"/></div>
+      </div>
+      <div class="g2">
+        <div class="f"><label>국가 (비워도 추론)</label><input id="fco" placeholder="AI가 추론합니다"/></div>
+        <div class="f"><label>이메일 (선택)</label><input id="fe" placeholder=""/></div>
+      </div>
+    </div>
+    <div class="brow">
+      <button class="btn bp" onclick="doSingle()">AI 교정 실행</button>
+      <button class="btn" onclick="clrSingle()">초기화</button>
+      <span id="sst"></span>
+    </div>
+  </div>
+  <div id="sres" style="display:none;">
+    <div class="card"><div class="ct">AI 분석</div><div id="sout" class="rbox"></div></div>
+    <div class="cpanel" id="cpanel" style="display:none;">
+      <div class="ct" style="color:var(--gr);">교정된 주소 — 황색: AI 추론값</div>
+      <div style="display:grid;gap:10px;">
+        <div class="g2">
+          <div class="f"><label>주소 1</label><input id="ca1" class=""/></div>
+          <div class="f"><label>주소 2</label><input id="ca2" class=""/></div>
+        </div>
+        <div class="g4">
+          <div class="f"><label id="lc">도시</label><input id="cc" class=""/></div>
+          <div class="f"><label id="ls">주/도</label><input id="cs" class=""/></div>
+          <div class="f"><label id="lpo">우편번호</label><input id="cpo" class=""/></div>
+          <div class="f"><label id="lco">국가코드</label><input id="cco" class=""/></div>
+        </div>
+      </div>
+      <div class="brow"><button class="btn bg" onclick="s2batch()">배치 목록에 추가</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EXPORT ===== -->
+<div id="pg-export" class="pg">
+  <div class="ph"><h1>송장 CSV 출력</h1><p>교정 목록을 DHL / FedEx Ship Manager 업로드 형식으로 다운로드합니다</p></div>
+  <div class="card">
+    <div class="ct">출력 형식</div>
+    <div class="ctog">
+      <button class="ctb don" id="eb-d" onclick="setEC('dhl')">DHL Ship Manager</button>
+      <button class="ctb" id="eb-f" onclick="setEC('fedex')">FedEx Ship Manager</button>
+    </div>
+    <div id="etip" class="tip tdhl"><span>📄</span><span id="etip-t">DHL MyDHL Ship Manager 업로드 형식</span></div>
+  </div>
+  <div class="card">
+    <div class="ct">발송인 정보</div>
+    <div style="display:grid;gap:10px;">
+      <div class="g2">
+        <div class="f"><label>발송인 이름</label><input id="sn" placeholder="Hong Gil Dong"/></div>
+        <div class="f"><label>회사명</label><input id="sc" placeholder="My Shop Korea"/></div>
+      </div>
+      <div class="f"><label>주소</label><input id="sa" placeholder="123 Teheran-ro, Gangnam-gu"/></div>
+      <div class="g4">
+        <div class="f"><label>도시</label><input id="sci" value="Seoul"/></div>
+        <div class="f"><label>우편번호</label><input id="spo" placeholder="06141"/></div>
+        <div class="f"><label>국가코드</label><input id="sco" value="KR"/></div>
+        <div class="f"><label>전화번호</label><input id="sph" placeholder="+82-10-0000-0000"/></div>
+      </div>
+      <div class="f"><label>이메일</label><input id="sem" placeholder="shop@myshop.kr"/></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">화물 기본값</div>
+    <div class="g4">
+      <div class="f"><label>서비스 코드</label><input id="evc" value="P"/></div>
+      <div class="f"><label>중량 (kg)</label><input id="ewt" value="0.5"/></div>
+      <div class="f"><label>통화</label><input id="ecur" value="KRW"/></div>
+      <div class="f"><label>품목 설명</label><input id="edesc" value="Clothing"/></div>
+    </div>
+    <div style="margin-top:7px;font-size:11px;color:var(--tx3);">
+      DHL: P(Worldwide) · K(9:00) · T(12:00) &nbsp;|&nbsp; FedEx: FEDEX_INTERNATIONAL_PRIORITY · FEDEX_INTERNATIONAL_ECONOMY
+    </div>
+  </div>
+  <div class="brow">
+    <button class="btn bp" onclick="genCSV()">CSV 다운로드</button>
+    <button class="btn" onclick="prvCSV()">미리보기</button>
+    <span id="est"></span>
+  </div>
+  <div id="cprev" class="cpre" style="display:none;"></div>
+</div>
+
+</main>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+let BD = [];           // batch data
+let sCar = 'dhl';      // single carrier
+let eCar = 'dhl';      // export carrier
+let stopF = false;
+let pHdrs = [];        // parsed headers
+let pRows = [];        // parsed rows
+
+// ════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════
+const PAGES = ['upload','batch','single','export'];
+function go(p) {
+  PAGES.forEach(x => {
+    document.getElementById('pg-'+x).classList.toggle('on', x===p);
+    document.getElementById('ni-'+x).classList.toggle('on', x===p);
+  });
+  if (p==='batch') { renderTable(); updStats(); }
+}
+
+// ════════════════════════════════════════════
+//  TEMPLATE
+// ════════════════════════════════════════════
+function dlTmpl(type) {
+  const h = ['수취인이름','전화번호','이메일','주소1','주소2','도시','주도','우편번호','국가'];
+  const d = [
+    ['John Smith','+12125551234','john@email.com','350 Fifth Avenue','','','','',''],
+    ['Tanaka Yuki','+81312345678','','1-2-3 Shinjuku Shinjuku-ku Tokyo','','','','',''],
+    ['Emma Wilson','+447911123456','','10 Downing Street London SW1A 2AA','','','','','UK'],
+    ['홍길동','+821012345678','','서울시 강남구 테헤란로 123 힐스테이트 101호','','','','',''],
+    ['Carlos Gomez','+521234567890','','Av Insurgentes Sur 1602 Benito Juarez CDMX 03940 Mexico','','','','',''],
+  ];
+  if (type==='csv') {
+    dlBlob('\uFEFF'+[h,...d].map(r=>r.map(c=>'"'+c+'"').join(',')).join('\n'),'text/csv','ShipCorrect_Template.csv');
+  } else {
+    if (!window.XLSX){alert('잠시 후 다시 시도해주세요.');return;}
+    const ws=XLSX.utils.aoa_to_sheet([h,...d]);
+    ws['!cols']=h.map(()=>({wch:22}));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'배송목록');
+    XLSX.writeFile(wb,'ShipCorrect_Template.xlsx');
+  }
+}
+function dlBlob(c,m,n){
+  const b=new Blob([c],{type:m}),u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download=n;document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(u);
+}
+
+// ════════════════════════════════════════════
+//  FILE UPLOAD
+// ════════════════════════════════════════════
+function dzOver(e){e.preventDefault();document.getElementById('dz').classList.add('ov');}
+function dzLeave(){document.getElementById('dz').classList.remove('ov');}
+function dzDrop(e){e.preventDefault();dzLeave();const f=e.dataTransfer.files[0];if(f)procFile(f);}
+function onFile(e){if(e.target.files[0])procFile(e.target.files[0]);}
+
+function procFile(file) {
+  const fb=document.getElementById('ufb');
+  fb.innerHTML='<span class="badge bload"><span class="spin"></span> 읽는 중...</span>';
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'){
+    const r=new FileReader();
+    r.onload=e=>{parseCSV(e.target.result,file.name);fb.innerHTML=`<span class="badge bok">✓ ${file.name} 로드 완료</span>`;};
+    r.onerror=()=>{fb.innerHTML='<span class="badge berr">파일 읽기 실패</span>';};
+    r.readAsText(file,'UTF-8');
+  } else if(['xlsx','xls'].includes(ext)){
+    if(!window.XLSX){fb.innerHTML='<span class="badge berr">Excel 라이브러리 미로드</span>';return;}
+    const r=new FileReader();
+    r.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(data.length<2){fb.innerHTML='<span class="badge berr">데이터 없음</span>';return;}
+        pHdrs=data[0].map(h=>String(h).trim());
+        pRows=data.slice(1).filter(r=>r.some(c=>String(c).trim()));
+        showMapper(file.name);
+        fb.innerHTML=`<span class="badge bok">✓ ${file.name} (${pRows.length}행)</span>`;
+      }catch(err){fb.innerHTML=`<span class="badge berr">오류: ${err.message}</span>`;}
+    };
+    r.readAsArrayBuffer(file);
+  } else {
+    fb.innerHTML='<span class="badge berr">CSV, XLSX, XLS만 지원</span>';
+  }
+}
+
+function parseCSV(text,fn){
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return;
+  const parse=line=>{
+    const res=[];let cur='';let q=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}
+      else if(c===','&&!q){res.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    res.push(cur.trim());return res;
+  };
+  pHdrs=parse(lines[0]);
+  pRows=lines.slice(1).map(l=>parse(l)).filter(r=>r.some(c=>c));
+  showMapper(fn);
+}
+
+// ════════════════════════════════════════════
+//  COLUMN MAPPER
+// ════════════════════════════════════════════
+const FD=[
+  {k:'name', lb:'수취인 이름 *', req:true,  hn:['이름','name','recipient','수취인','받는사람','성명']},
+  {k:'phone',lb:'전화번호',       req:false, hn:['phone','전화','연락처','tel','mobile','핸드폰']},
+  {k:'email',lb:'이메일',         req:false, hn:['email','이메일','mail']},
+  {k:'addr1',lb:'주소 1 *',       req:true,  hn:['주소1','address1','addr1','street','주소','address','배송지']},
+  {k:'addr2',lb:'주소 2',         req:false, hn:['주소2','address2','addr2','apt','suite','동호','상세']},
+  {k:'city', lb:'도시',           req:false, hn:['city','도시','시']},
+  {k:'state',lb:'주/도',          req:false, hn:['state','province','주도','주','도']},
+  {k:'postal',lb:'우편번호',      req:false, hn:['postal','zip','우편번호','postcode','우편']},
+  {k:'country',lb:'국가',         req:false, hn:['country','국가','나라','nation']},
+];
+function autoDetect(h){
+  const n=h.toLowerCase().replace(/[\s_\-]/g,'');
+  for(const fd of FD){
+    if(fd.hn.some(hint=>{const hn=hint.toLowerCase().replace(/[\s_\-]/g,'');return n===hn||n.startsWith(hn)||hn.startsWith(n);}))return fd.k;
+  }
+  return '';
+}
+function showMapper(fn){
+  document.getElementById('map-card').style.display='block';
+  document.getElementById('map-col-hdr').textContent=`파일 컬럼 (${pHdrs.length}개 · ${pRows.length}행)`;
+  document.getElementById('map-info').textContent=`"${fn}" ${pRows.length}행 감지`;
+  const g=document.getElementById('map-grid');
+  g.innerHTML=FD.map(fd=>{
+    const ai=pHdrs.findIndex(h=>autoDetect(h)===fd.k);
+    const opts=pHdrs.map((h,i)=>`<option value="${i}"${ai===i?' selected':''}>${h||'(열 '+i+')'}</option>`).join('');
+    return`<div class="mrow"><span style="font-size:12px;color:var(--tx2);font-weight:500;">${fd.lb}</span><span style="color:var(--tx3);text-align:center;">→</span><select class="msel" id="m-${fd.k}"><option value="-1">${fd.req?'-- 선택 필수 --':'-- 없음 (AI 추론) --'}</option>${opts}</select></div>`;
+  }).join('');
+}
+function doImport(){
+  const ni=parseInt(document.getElementById('m-name').value);
+  const ai=parseInt(document.getElementById('m-addr1').value);
+  if(ni<0){alert('수취인 이름 컬럼을 선택해주세요.');return;}
+  if(ai<0){alert('주소 1 컬럼을 선택해주세요.');return;}
+  const gv=(row,k)=>{const i=parseInt(document.getElementById('m-'+k).value);return i>=0?String(row[i]||'').trim():'';}
+  let added=0;
+  for(const row of pRows){
+    const name=gv(row,'name'),addr1=gv(row,'addr1');
+    if(!name&&!addr1)continue;
+    BD.push({name:name||'(이름없음)',phone:gv(row,'phone'),email:gv(row,'email'),addr1,addr2:gv(row,'addr2'),city:gv(row,'city'),state:gv(row,'state'),postal:gv(row,'postal'),country:gv(row,'country'),status:'pending',inferred:[]});
+    added++;
+  }
+  document.getElementById('import-st').innerHTML=`<span class="badge bok">✓ ${added}건 추가</span>`;
+  setTimeout(()=>{document.getElementById('import-st').innerHTML='';},3000);
+  renderTable();updStats();
+  setTimeout(()=>go('batch'),500);
+}
+
+// ════════════════════════════════════════════
+//  SAMPLE DATA
+// ════════════════════════════════════════════
+function addSamples(){
+  BD.push(
+    {name:'John Smith',phone:'+12125551234',email:'',addr1:'350 fifth avenue',addr2:'',city:'new york',state:'ny',postal:'10118',country:'USA',status:'pending',inferred:[]},
+    {name:'Tanaka Yuki',phone:'+81312345678',email:'',addr1:'1-2-3 Shinjuku Shinjuku-ku Tokyo Japan',addr2:'',city:'',state:'',postal:'',country:'',status:'pending',inferred:[]},
+    {name:'Emma Wilson',phone:'+447911123456',email:'',addr1:'10 Downing Street London SW1A 2AA',addr2:'',city:'',state:'',postal:'',country:'',status:'pending',inferred:[]},
+    {name:'Sophie Martin',phone:'+33123456789',email:'',addr1:'10 Avenue des Champs-Elysees',addr2:'Appt 3',city:'Paris',state:'',postal:'75008',country:'',status:'pending',inferred:[]},
+    {name:'Li Wei',phone:'+8613812345678',email:'',addr1:'No.8 Jianguomennei Avenue Dongcheng',addr2:'',city:'Beijing',state:'',postal:'10005',country:'china',status:'pending',inferred:[]},
+    {name:'Carlos Gomez',phone:'+521234567890',email:'',addr1:'Av Insurgentes Sur 1602 Benito Juarez CDMX 03940 Mexico',addr2:'',city:'',state:'',postal:'',country:'',status:'pending',inferred:[]},
+    {name:'홍길동',phone:'+821012345678',email:'',addr1:'서울시 강남구 테헤란로 123 힐스테이트 101호',addr2:'',city:'',state:'',postal:'',country:'',status:'pending',inferred:[]},
+    {name:'Priya Sharma',phone:'+919876543210',email:'',addr1:'12 MG Road Indiranagar Bangalore Karnataka 560038',addr2:'',city:'',state:'',postal:'',country:'',status:'pending',inferred:[]}
+  );
+  renderTable();updStats();
+}
+
+// ════════════════════════════════════════════
+//  TABLE RENDER  (단순 문자열 빌드 → innerHTML 한 번)
+// ════════════════════════════════════════════
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function rowHTML(r,i){
+  const dc=r.status==='ok'?'dok':r.status==='error'?'derr':r.status==='working'?'dam':'dpd';
+  const dch=r.status==='ok'?'✓':r.status==='error'?'!':r.status==='working'?'…':'·';
+  const inf=r.inferred||[];
+  const tc=f=>inf.includes(f)?'iinf':(r.status==='ok'?'iok':'');
+  const tt=f=>inf.includes(f)?' title="AI 추론값 — 확인 권장"':'';
+  const stHTML=r.status==='working'
+    ?'<span class="spin"></span>'
+    :`<span class="badge" style="font-size:10px;${r.status==='ok'?'background:var(--grD);color:var(--gr)':r.status==='error'?'background:var(--reD);color:var(--re)':'background:var(--sf3);color:var(--tx3)'}">${r.status==='ok'?'완료':r.status==='error'?'오류':'대기'}</span>`;
+  return`<tr>
+<td><span class="rdot ${dc}">${dch}</span></td>
+<td><input value="${esc(r.name)}" onchange="BD[${i}].name=this.value"/></td>
+<td><input value="${esc(r.addr1)}" onchange="BD[${i}].addr1=this.value"/></td>
+<td><input value="${esc(r.addr2||'')}" onchange="BD[${i}].addr2=this.value"/></td>
+<td><input class="${tc('city')}"${tt('city')} value="${esc(r.city)}" onchange="BD[${i}].city=this.value"/></td>
+<td><input class="${tc('state')}"${tt('state')} value="${esc(r.state||'')}" onchange="BD[${i}].state=this.value"/></td>
+<td><input class="${tc('postal')}"${tt('postal')} value="${esc(r.postal)}" onchange="BD[${i}].postal=this.value"/></td>
+<td><input class="${tc('country')}"${tt('country')} value="${esc(r.country)}" onchange="BD[${i}].country=this.value"/></td>
+<td><input value="${esc(r.phone||'')}" onchange="BD[${i}].phone=this.value"/></td>
+<td>${stHTML}</td>
+<td><button class="del-btn" onclick="delRow(${i})">✕</button></td>
+</tr>`;
+}
+
+function renderTable(){
+  const tb=document.getElementById('btbody');
+  if(!BD.length){
+    tb.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--tx3);padding:32px 0;">업로드 탭에서 파일을 불러오거나 샘플 데이터를 추가하세요</td></tr>';
+    return;
+  }
+  tb.innerHTML=BD.map((r,i)=>rowHTML(r,i)).join('');
+}
+
+// 특정 행만 업데이트 (전체 재렌더 방지)
+function updateRow(i){
+  const tb=document.getElementById('btbody');
+  const rows=tb.querySelectorAll('tr');
+  if(rows[i]){
+    const tmp=document.createElement('tbody');
+    tmp.innerHTML=rowHTML(BD[i],i);
+    rows[i].replaceWith(tmp.firstElementChild);
+  }
+}
+
+function updStats(){
+  const t=BD.length,ok=BD.filter(r=>r.status==='ok').length;
+  const inf=BD.filter(r=>r.inferred&&r.inferred.length).length;
+  const pd=BD.filter(r=>r.status==='pending').length;
+  const er=BD.filter(r=>r.status==='error').length;
+  document.getElementById('st-tot').textContent=t;
+  document.getElementById('st-ok').textContent=ok;
+  document.getElementById('st-inf').textContent=inf;
+  document.getElementById('st-pd').textContent=pd;
+  document.getElementById('st-er').textContent=er;
+}
+
+function delRow(i){BD.splice(i,1);renderTable();updStats();}
+function clearBatch(){if(BD.length&&!confirm('초기화하시겠습니까?'))return;BD=[];renderTable();updStats();}
+
+// ════════════════════════════════════════════
+//  CLAUDE API
+// ════════════════════════════════════════════
+async function callClaude(prompt){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+  });
+  const d=await res.json();
+  if(d.error)throw new Error(d.error.message);
+  return d.content[0].text;
+}
+
+// ════════════════════════════════════════════
+//  BATCH CORRECTION  — 핵심 최적화
+//  전략: N건을 JSON 배열로 묶어 1회 API 호출
+// ════════════════════════════════════════════
+function buildBatchPrompt(items, carrier){
+  // 초경량 프롬프트: 설명 없이 JSON in → JSON out
+  const rows=items.map((r,i)=>({
+    id:i,
+    n:r.name||'',
+    a1:r.addr1||'',
+    a2:r.addr2||'',
+    ci:r.city||'',
+    st:r.state||'',
+    po:r.postal||'',
+    co:r.country||''
+  }));
+
+  const rules = carrier==='DHL'
+    ? 'DHL: addr max 35chr/2lines, ISO2 country, state 2-letter for US/CA/AU, fix postal format'
+    : 'FedEx: addr max 35chr, stateCode required for US/CA, ISO2 country, ASCII only';
+
+  return `Fix ${items.length} shipping addresses for ${carrier}. For missing city/state/postal/country: INFER from address text. Korean/non-English: transliterate to English.
+Rules: ${rules}
+
+Input JSON:
+${JSON.stringify(rows)}
+
+Respond ONLY with a JSON array, no markdown, no explanation:
+[{"id":0,"a1":"...","a2":"...","ci":"...","st":"...","po":"...","co":"...","inf":["city","postal"]}]
+"inf" = list of fields that were inferred/missing (empty array if none).
+Keep all ${items.length} items. Preserve id values exactly.`;
+}
+
+function parseBatchResponse(text){
+  // strip markdown fences if present
+  let t=text.trim();
+  if(t.startsWith('```'))t=t.replace(/^```[a-z]*\n?/,'').replace(/```$/,'').trim();
+  try{return JSON.parse(t);}
+  catch{
+    // try to extract JSON array
+    const m=t.match(/\[[\s\S]*\]/);
+    if(m)return JSON.parse(m[0]);
+    throw new Error('JSON 파싱 실패');
+  }
+}
+
+async function correctAll(){
+  const pending=BD.filter(r=>r.status==='pending');
+  if(!pending.length){alert('대기 중인 항목이 없습니다.');return;}
+
+  stopF=false;
+  document.getElementById('corr-btn').disabled=true;
+  document.getElementById('stop-btn').style.display='inline-flex';
+  document.getElementById('pwrap').style.display='block';
+
+  const carrier=document.getElementById('bcarrier').value.toUpperCase();
+  const bsize=parseInt(document.getElementById('bsize').value);   // 건당 묶음 크기
+  const bpar=parseInt(document.getElementById('bpar').value);     // 동시 API 호출 수
+
+  // 대기 중인 인덱스만 추출
+  const pendingIdxs=BD.map((r,i)=>r.status==='pending'?i:-1).filter(i=>i>=0);
+
+  // 묶음 청크 생성: [[idx0,idx1,...],[idx15,...],...]
+  const chunks=[];
+  for(let i=0;i<pendingIdxs.length;i+=bsize)
+    chunks.push(pendingIdxs.slice(i,i+bsize));
+
+  let doneItems=0;
+  const total=pendingIdxs.length;
+  const startTime=Date.now();
+
+  const setProg=()=>{
+    const pct=Math.round(doneItems/total*100);
+    document.getElementById('pfill').style.width=pct+'%';
+    document.getElementById('ppct').textContent=pct+'%';
+    document.getElementById('plbl').innerHTML=`${doneItems} / ${total} 처리 중 <span class="speed-info">속도: <span class="speed-num" id="speed-val">—</span> 건/분</span>`;
+
+    if(doneItems>0){
+      const elapsed=(Date.now()-startTime)/1000/60; // minutes
+      const spd=Math.round(doneItems/elapsed);
+      const sv=document.getElementById('speed-val');
+      if(sv)sv.textContent=spd.toLocaleString();
+      const remain=total-doneItems;
+      const etaSec=Math.round(remain/doneItems*(Date.now()-startTime)/1000);
+      document.getElementById('peta').textContent=etaSec>0?`잔여 ~${etaSec<60?etaSec+'초':Math.ceil(etaSec/60)+'분'}`:'';
+    }
+  };
+  setProg();
+
+  // 청크를 bpar개씩 병렬 실행
+  for(let ci=0;ci<chunks.length;ci+=bpar){
+    if(stopF)break;
+    const wave=chunks.slice(ci,ci+bpar);
+
+    // 이 wave의 모든 항목을 working으로 표시
+    wave.flat().forEach(idx=>{
+      BD[idx].status='working';
+      updateRow(idx);
+    });
+
+    await Promise.all(wave.map(async chunk=>{
+      if(stopF)return;
+      const items=chunk.map(idx=>BD[idx]);
+      try{
+        const text=await callClaude(buildBatchPrompt(items,carrier));
+        const results=parseBatchResponse(text);
+
+        // 결과 매핑
+        for(const res of results){
+          const idx=chunk[res.id];
+          if(idx===undefined)continue;
+          const r=BD[idx];
+          const wasEmpty={city:!r.city,state:!r.state,postal:!r.postal,country:!r.country};
+
+          if(res.a1)r.addr1=res.a1;
+          if(res.a2!==undefined)r.addr2=res.a2||'';
+          if(res.ci)r.city=res.ci;
+          if(res.st!==undefined)r.state=res.st||'';
+          if(res.po)r.postal=res.po;
+          if(res.co)r.country=res.co;
+
+          // 추론된 필드 추적
+          const inf=[];
+          ['city','state','postal','country'].forEach(f=>{
+            const fk={city:'ci',state:'st',postal:'po',country:'co'}[f];
+            if((res.inf&&res.inf.includes(f))||(wasEmpty[f]&&res[fk]))inf.push(f);
+          });
+          r.inferred=inf;
+          r.status='ok';
+        }
+
+        // 결과 매핑 안 된 항목 처리
+        chunk.forEach(idx=>{if(BD[idx].status==='working')BD[idx].status='ok';});
+
+      } catch(e){
+        chunk.forEach(idx=>{
+          BD[idx].status='error';
+          BD[idx]._err=e.message;
+        });
+      }
+
+      doneItems+=chunk.length;
+      setProg();
+      // 이 chunk의 행들만 업데이트
+      chunk.forEach(idx=>updateRow(idx));
+      updStats();
+    }));
+  }
+
+  document.getElementById('corr-btn').disabled=false;
+  document.getElementById('stop-btn').style.display='none';
+  document.getElementById('bst').innerHTML=stopF
+    ?'<span class="badge bwarn">중단됨</span>'
+    :'<span class="badge bok">✓ 완료</span>';
+  setTimeout(()=>{
+    document.getElementById('pwrap').style.display='none';
+    document.getElementById('bst').innerHTML='';
+  },5000);
+}
+
+function stopAll(){stopF=true;}
+
+// ════════════════════════════════════════════
+//  SINGLE CORRECTION
+// ════════════════════════════════════════════
+function setC(c){
+  sCar=c;
+  document.getElementById('ctb-d').className='ctb'+(c==='dhl'?' don':'');
+  document.getElementById('ctb-f').className='ctb'+(c==='fedex'?' fon':'');
+  document.getElementById('ctip').className='tip '+(c==='dhl'?'tdhl':'tfx');
+  document.getElementById('ctip-t').textContent=c==='dhl'
+    ?'DHL: streetLines 최대 35자/2줄 · ISO 국가코드 2자리 · 누락 필드 자동 추론'
+    :'FedEx: streetLines 35자 이내 3줄 · 미국/캐나다 주 2자리 필수 · 누락 필드 자동 추론';
+}
+function clrSingle(){
+  ['fn','fp','fa1','fa2','fc','fs','fpo','fco','fe'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('sres').style.display='none';
+  document.getElementById('sst').innerHTML='';
+}
+async function doSingle(){
+  const r={name:v('fn'),phone:v('fp'),addr1:v('fa1'),addr2:v('fa2'),city:v('fc'),state:v('fs'),postal:v('fpo'),country:v('fco'),email:v('fe')};
+  if(!r.addr1){alert('주소 1을 입력해주세요.');return;}
+  const st=document.getElementById('sst');
+  st.innerHTML='<span class="badge bload"><span class="spin"></span> 분석 중...</span>';
+  document.getElementById('sres').style.display='block';
+  document.getElementById('cpanel').style.display='none';
+  const out=document.getElementById('sout');
+  out.className='rbox';out.textContent='AI가 주소를 분석 중...';
+
+  const carrier=sCar.toUpperCase();
+  const missing=[];
+  if(!r.city)missing.push('city');if(!r.state)missing.push('state');
+  if(!r.postal)missing.push('postal');if(!r.country)missing.push('country');
+
+  const prompt=`Fix this address for ${carrier}. ${missing.length?'MISSING: '+missing.join(', ')+' — infer from address text.':''} ${!r.country||!r.city?'Korean/non-English: transliterate to English.':''}
+Rules: ${carrier==='DHL'?'addr max 35chr/2lines, ISO2 country, state 2-letter for US/CA/AU':'addr max 35chr, stateCode required for US/CA, ISO2 country'}
+
+Name: ${r.name} | Addr1: ${r.addr1} | Addr2: ${r.addr2||''} | City: ${r.city||'?'} | State: ${r.state||'?'} | Postal: ${r.postal||'?'} | Country: ${r.country||'?'}
+
+Reply in Korean then fields:
+[분석]
+(2-3문장 한국어: 문제점, 추론 근거, 교정 내용)
+[필드]
+ADDR1: 
+ADDR2: 
+CITY: 
+STATE: 
+POSTAL: 
+COUNTRY_CODE: 
+INFERRED: (추론된 필드 목록 또는 none)`;
+
+  try{
+    const text=await callClaude(prompt);
+    out.className='rbox has';out.textContent=text;
+    const lines=text.split('\n');
+    const gf=k=>{const l=lines.find(x=>x.trim().startsWith(k+':'));return l?l.replace(k+':','').trim():null;};
+    const f={a1:gf('ADDR1'),a2:gf('ADDR2'),ci:gf('CITY'),st:gf('STATE'),po:gf('POSTAL'),co:gf('COUNTRY_CODE'),inf:(gf('INFERRED')||'').toLowerCase()};
+    const wasEmpty={city:!r.city,state:!r.state,postal:!r.postal,country:!r.country};
+    sv('ca1',f.a1||r.addr1);sv('ca2',f.a2!==null?f.a2:r.addr2);
+    sv('cc',f.ci||r.city);sv('cs',f.st!==null?f.st:r.state);
+    sv('cpo',f.po||r.postal);sv('cco',f.co||r.country);
+    ['city','state','postal','country'].forEach(field=>{
+      const fk={city:'ci',state:'st',postal:'po',country:'co'}[field];
+      const iid={city:'cc',state:'cs',postal:'cpo',country:'cco'}[field];
+      const lid={city:'lc',state:'ls',postal:'lpo',country:'lco'}[field];
+      const isInf=wasEmpty[field]&&(f.inf.includes(field)||f[fk]);
+      document.getElementById(iid).className=isInf?'iinf':'iok';
+      document.getElementById(lid).textContent={city:'도시',state:'주/도',postal:'우편번호',country:'국가코드'}[field]+(isInf?' ★추론':'');
+    });
+    document.getElementById('cpanel').style.display='block';
+    st.innerHTML='<span class="badge bok">✓ 완료</span>';
+  }catch(e){out.textContent='오류: '+e.message;st.innerHTML='<span class="badge berr">오류</span>';}
+}
+
+function s2batch(){
+  BD.push({name:v('fn')||'(이름없음)',phone:v('fp'),email:v('fe'),addr1:v('ca1'),addr2:v('ca2'),city:v('cc'),state:v('cs'),postal:v('cpo'),country:v('cco'),status:'ok',inferred:[]});
+  renderTable();updStats();go('batch');
+}
+
+// ════════════════════════════════════════════
+//  EXPORT
+// ════════════════════════════════════════════
+function setEC(c){
+  eCar=c;
+  document.getElementById('eb-d').className='ctb'+(c==='dhl'?' don':'');
+  document.getElementById('eb-f').className='ctb'+(c==='fedex'?' fon':'');
+  document.getElementById('etip').className='tip '+(c==='dhl'?'tdhl':'tfx');
+  document.getElementById('etip-t').textContent=c==='dhl'?'DHL MyDHL Ship Manager 업로드 형식':'FedEx Ship Manager Server CSV 형식';
+  document.getElementById('evc').value=c==='dhl'?'P':'FEDEX_INTERNATIONAL_PRIORITY';
+}
+function q(s){return'"'+(s||'').replace(/"/g,'""')+'"';}
+function getSh(){return{name:v('sn')||'Sender',co:v('sc'),addr:v('sa'),city:v('sci')||'Seoul',postal:v('spo'),country:v('sco')||'KR',phone:v('sph'),email:v('sem')};}
+function buildCSV(rows,sh){
+  const today=new Date().toISOString().split('T')[0];
+  const svc=v('evc')||'P',wt=v('ewt')||'0.5',cur=v('ecur')||'KRW',desc=v('edesc')||'Goods';
+  if(eCar==='dhl'){
+    const h=['ShipDate','ServiceCode','ShipperName','ShipperCompany','ShipperAddress1','ShipperAddress2','ShipperCity','ShipperPostalCode','ShipperCountryCode','ShipperPhone','ShipperEmail','RecipientName','RecipientAddress1','RecipientAddress2','RecipientCity','RecipientStateProvince','RecipientPostalCode','RecipientCountryCode','RecipientPhone','RecipientEmail','Weight','Currency','ContentDescription','Reference'].map(q).join(',');
+    const l=rows.map((r,i)=>[today,svc,sh.name,sh.co,sh.addr,'',sh.city,sh.postal,sh.country,sh.phone,sh.email,r.name,r.addr1,r.addr2||'',r.city,r.state||'',r.postal,r.country,r.phone||'',r.email||'',wt,cur,desc,'ORD-'+String(i+1).padStart(4,'0')].map(q).join(','));
+    return h+'\n'+l.join('\n');
+  }else{
+    const h=['ShipDate','ServiceType','SenderName','SenderCompany','SenderStreetLines1','SenderCity','SenderStateOrProvinceCode','SenderPostalCode','SenderCountryCode','SenderPhone','RecipientName','RecipientStreetLines1','RecipientStreetLines2','RecipientCity','RecipientStateOrProvinceCode','RecipientPostalCode','RecipientCountryCode','RecipientPhone','RecipientEmailAddress','Weight','WeightUnits','Currency','CommodityDescription','CustomerReference'].map(q).join(',');
+    const l=rows.map((r,i)=>[today,svc,sh.name,sh.co,sh.addr,sh.city,'',sh.postal,sh.country,sh.phone,r.name,r.addr1,r.addr2||'',r.city,r.state||'',r.postal,r.country,r.phone||'',r.email||'',wt,'KG',cur,desc,'ORD-'+String(i+1).padStart(4,'0')].map(q).join(','));
+    return h+'\n'+l.join('\n');
+  }
+}
+function genCSV(){
+  const rows=BD.length?BD:[{name:'Sample',addr1:'350 Fifth Ave',addr2:'',city:'New York',state:'NY',postal:'10118',country:'US',phone:'+12125550001',email:'',status:'ok'}];
+  dlBlob('\uFEFF'+buildCSV(rows,getSh()),'text/csv;charset=utf-8',eCar.toUpperCase()+'_shipments_'+new Date().toISOString().split('T')[0]+'.csv');
+  document.getElementById('est').innerHTML='<span class="badge bok">✓ 다운로드</span>';
+  setTimeout(()=>{document.getElementById('est').innerHTML='';},3000);
+}
+function prvCSV(){
+  const p=document.getElementById('cprev');
+  p.style.display=p.style.display==='none'?'block':'none';
+  if(p.style.display==='block'){
+    const rows=BD.length?BD:[{name:'Sample',addr1:'350 Fifth Ave',addr2:'',city:'New York',state:'NY',postal:'10118',country:'US',phone:'+12125550001',email:'',status:'ok'}];
+    p.textContent=buildCSV(rows,getSh());
+  }
+}
+
+// ════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════
+function v(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+function sv(id,val){const e=document.getElementById(id);if(e)e.value=val||'';}
+</script>
+</body>
+</html>

@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사인회 배송 관리 시스템</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:#0e0f11; --bg2:#161719; --bg3:#1e2023; --bg4:#26282c;
+  --border:#2e3035; --border2:#3a3d44;
+  --text:#e8eaed; --text2:#9aa0ab; --text3:#5c6270;
+  --accent:#c8f04a; --accent2:#a8d438;
+  --accent-dim:rgba(200,240,74,.12); --accent-dim2:rgba(200,240,74,.06);
+  --red:#ff5f57; --red-dim:rgba(255,95,87,.12);
+  --teal:#5acfba; --teal-dim:rgba(90,207,186,.12);
+  --amber:#ffbe3d; --amber-dim:rgba(255,190,61,.12);
+  --blue:#5ba3f5; --blue-dim:rgba(91,163,245,.12);
+  --purple:#b48cff; --purple-dim:rgba(180,140,255,.12);
+  --google:#4fc3f7; --google-dim:rgba(79,195,247,.12);
+  --radius:8px; --radius-lg:12px;
+  --font:'Noto Sans KR',sans-serif; --mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* LAYOUT */
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.logo{padding:20px 20px 16px;border-bottom:1px solid var(--border)}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.logo-icon svg{width:18px;height:18px}
+.logo-title{font-size:13px;font-weight:700;letter-spacing:-.02em;line-height:1.3}
+.logo-sub{font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono);letter-spacing:.05em}
+
+/* GOOGLE KEY input in sidebar */
+.sidebar-key{padding:12px 14px;border-bottom:1px solid var(--border)}
+.sidebar-key-label{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.sidebar-key-label .dot{width:7px;height:7px;border-radius:50%;background:var(--text3)}
+.sidebar-key-label .dot.connected{background:var(--teal)}
+.sidebar-key input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 9px;outline:none}
+.sidebar-key input:focus{border-color:var(--google)}
+.sidebar-key-row{display:flex;gap:6px;margin-top:6px}
+.sidebar-key-row .btn-xs{flex:1;padding:4px 8px;font-size:11px;border-radius:5px;cursor:pointer;background:var(--bg4);border:1px solid var(--border2);color:var(--text3);transition:all .15s}
+.sidebar-key-row .btn-xs:hover{color:var(--text)}
+.sidebar-key-hint{font-size:10px;color:var(--text3);margin-top:5px;line-height:1.5}
+
+.nav{flex:1;padding:12px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.nav-group-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.1em;padding:4px 8px 6px;margin-top:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius);cursor:pointer;transition:all .15s;color:var(--text2);font-size:13px;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:500}
+.nav-item.active .nav-num{background:var(--accent);color:var(--bg)}
+.nav-num{width:20px;height:20px;border-radius:50%;background:var(--bg4);color:var(--text3);font-size:10px;font-family:var(--mono);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:auto;opacity:0;transition:opacity .15s}
+.nav-item.active .nav-dot{opacity:1}
+.nav-badge{margin-left:auto;font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:3px}
+.nb-err{background:var(--red-dim);color:var(--red)}
+.nb-ok{background:var(--teal-dim);color:var(--teal)}
+
+.sidebar-footer{padding:14px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);font-family:var(--mono);line-height:1.7}
+
+/* MAIN */
+.main{background:var(--bg);overflow:hidden}
+.page{display:none;padding:28px 32px;max-width:1100px;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.page-header{margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.03em}
+.page-title span{color:var(--accent)}
+.page-desc{font-size:13px;color:var(--text3);margin-top:4px}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+
+/* ALERTS */
+.alert{padding:10px 14px;border-radius:var(--radius);font-size:12px;margin-bottom:12px;line-height:1.7;border-left:3px solid}
+.alert-info{background:var(--blue-dim);color:var(--blue);border-color:var(--blue)}
+.alert-warn{background:var(--amber-dim);color:var(--amber);border-color:var(--amber)}
+.alert-success{background:var(--teal-dim);color:var(--teal);border-color:var(--teal)}
+.alert-accent{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
+.alert-google{background:var(--google-dim);color:var(--google);border-color:var(--google)}
+.alert-err{background:var(--red-dim);color:var(--red);border-color:var(--red)}
+
+/* FORMS */
+label{font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;letter-spacing:.02em}
+input[type=text],input[type=number],select,textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;font-family:var(--font);padding:7px 10px;outline:none;transition:border-color .15s;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim2)}
+select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c6270' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+input[type=number]{font-family:var(--mono)}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+
+/* BUTTONS */
+.btn{padding:7px 15px;font-size:13px;font-family:var(--font);font-weight:500;border-radius:var(--radius);cursor:pointer;transition:all .15s;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);white-space:nowrap}
+.btn:hover{background:var(--bg4);color:var(--text)}
+.btn-accent{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:700}
+.btn-accent:hover{background:var(--accent2)}
+.btn-google{background:var(--google);color:#001f2d;border-color:var(--google);font-weight:700}
+.btn-google:hover{opacity:.9}
+.btn-sm{padding:4px 11px;font-size:12px}
+.btn-del{background:transparent;border-color:var(--border);color:var(--red);font-size:12px;padding:4px 9px}
+.btn-del:hover{background:var(--red-dim);border-color:var(--red)}
+.btn-ghost{background:transparent;border-color:var(--border);color:var(--text3)}
+.btn-ghost:hover{color:var(--text);background:var(--bg3)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ROW ITEMS */
+.ritem{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius)}
+.ritem:hover{border-color:var(--border2)}
+.ritem>div{flex:1}
+.ritem>.fx0{flex:0}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;margin:0 -2px;padding:0 2px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--bg3);padding:7px 9px;text-align:left;font-weight:500;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+td{padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.empty{text-align:center;color:var(--text3);padding:2.5rem;font-size:13px;font-style:italic}
+
+/* BADGES */
+.bk{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:500;font-family:var(--mono);white-space:nowrap}
+.b-accent{background:var(--accent-dim);color:var(--accent)}
+.b-teal{background:var(--teal-dim);color:var(--teal)}
+.b-amber{background:var(--amber-dim);color:var(--amber)}
+.b-blue{background:var(--blue-dim);color:var(--blue)}
+.b-purple{background:var(--purple-dim);color:var(--purple)}
+.b-red{background:var(--red-dim);color:var(--red)}
+.b-gray{background:var(--bg4);color:var(--text3)}
+.b-google{background:var(--google-dim);color:var(--google)}
+.merge-badge{display:inline-block;padding:1px 6px;background:var(--purple-dim);color:var(--purple);border-radius:4px;font-size:10px;font-family:var(--mono);margin-left:4px}
+.addr-fixed{display:inline-block;padding:1px 6px;background:var(--teal-dim);color:var(--teal);border-radius:4px;font-size:10px;font-family:var(--mono);margin-left:4px}
+.addr-err{display:inline-block;padding:1px 6px;background:var(--red-dim);color:var(--red);border-radius:4px;font-size:10px;font-family:var(--mono);margin-left:4px}
+.addr-intl{display:inline-block;padding:1px 6px;background:var(--google-dim);color:var(--google);border-radius:4px;font-size:10px;font-family:var(--mono);margin-left:4px}
+
+/* UPLOAD */
+.upload-zone{border:1.5px dashed var(--border2);border-radius:var(--radius-lg);padding:1.75rem;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover{border-color:var(--accent);background:var(--accent-dim2)}
+.upload-zone-icon{width:40px;height:40px;background:var(--bg3);border-radius:9px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+
+/* COLMAP */
+.colmap-grid{display:grid;grid-template-columns:160px 1fr;gap:6px 12px;align-items:center;font-size:12px}
+.colmap-grid>span{color:var(--text2)}
+
+/* SUMMARY CARDS */
+.sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.scard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;text-align:center}
+.scard:hover{border-color:var(--border2)}
+.snum{font-size:26px;font-weight:700;font-family:var(--mono);color:var(--accent);letter-spacing:-.04em}
+.slbl{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* PROGRESS */
+.prog-wrap{height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;margin:10px 0}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--google),var(--teal));border-radius:2px;transition:width .4s ease;width:0%}
+.prog-log{font-size:11px;color:var(--text3);font-family:var(--mono);max-height:64px;overflow-y:auto;line-height:2}
+
+/* ADDR REVIEW TABLE */
+.addr-review-row td{vertical-align:top;padding:8px 9px}
+.addr-original{font-size:11px;color:var(--text3);font-family:var(--mono);word-break:break-all;max-width:160px}
+.addr-parsed{font-size:11px;font-family:var(--mono);color:var(--teal)}
+.addr-issue{font-size:10px;color:var(--amber);margin-top:3px}
+.inline-edit{background:var(--bg4);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 6px;outline:none;width:100%;min-width:90px}
+.inline-edit:focus{border-color:var(--google)}
+.inline-edit.err{border-color:rgba(255,95,87,.5);color:var(--red)}
+.inline-edit.inferred{border-color:rgba(255,190,61,.4);color:var(--amber)}
+
+.footer-row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.hidden{display:none!important}
+
+/* SPINNER */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--google);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:-2px;margin-right:5px}
+
+/* ADDRESS STATUS INDICATOR in preview */
+.addr-status-cell{min-width:80px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div class="logo">
+    <img src="data:image/jpeg;base64,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" alt="Music Plant" style="width:100%;max-width:170px;display:block;margin-bottom:8px;border-radius:4px">
+    <div style="font-size:10px;color:var(--text3);line-height:1.6;font-family:var(--font)">대표가 간단하게 만든<br>합배기능 및 해외 주소<br>정정 프로그램</div>
+  </div>
+
+  <!-- Google API Key -->
+  <div class="sidebar-key">
+    <div class="sidebar-key-label">
+      <span class="dot" id="key-dot"></span>
+      GOOGLE ADDRESS API
+    </div>
+    <input type="password" id="googleKey" placeholder="AIza..." autocomplete="off" oninput="onKeyInput()">
+    <div class="sidebar-key-row">
+      <button class="btn-xs" onclick="testGoogleKey()">연결 확인</button>
+      <button class="btn-xs" id="key-del-btn" onclick="deleteKey()" style="display:none;color:var(--red)">키 삭제</button>
+    </div>
+    <div class="sidebar-key-hint" id="key-hint">해외 고객 주소를 자동으로 검증·수정합니다.<br>없으면 주소 검증 없이 진행됩니다.</div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-group-label">WORKFLOW</div>
+    <button class="nav-item active" onclick="go('setup')">
+      <span class="nav-num">1</span> 행사 세팅 <span class="nav-dot"></span>
+    </button>
+    <button class="nav-item" onclick="go('upload')">
+      <span class="nav-num">2</span> 주문 업로드
+      <span id="nav-addr-badge" class="nav-badge nb-err hidden">주소오류</span>
+      <span class="nav-dot"></span>
+    </button>
+    <button class="nav-item" onclick="go('winner')">
+      <span class="nav-num">3</span> 당첨자 등록 <span class="nav-dot"></span>
+    </button>
+    <button class="nav-item" onclick="go('result')">
+      <span class="nav-num">4</span> 배송 명단 <span class="nav-dot"></span>
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    응모자 + 수령자 + 주소<br>3가지 일치 시 자동 합배<br><br>
+    <span style="color:var(--google)">◆</span> 해외주소 Google 자동수정
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+<!-- PAGE: SETUP -->
+<div id="page-setup" class="page active">
+  <div class="page-header">
+    <div>
+      <div class="page-title">행사 <span>세팅</span></div>
+      <div class="page-desc">앨범·박스·행사·현장수령 기준을 등록합니다. 매 행사마다 새로 입력하세요.</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="clearSetup()">초기화</button>
+      <button class="btn btn-accent" onclick="saveSetup()">저장 후 다음 →</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">앨범 등록 <span style="color:var(--text3);font-weight:400">(최대 5종 · cm)</span>
+      <button class="btn btn-sm" onclick="addAlbum()">+ 추가</button></div>
+    <div id="album-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">박스 등록
+      <button class="btn btn-sm" onclick="addBox()">+ 추가</button></div>
+    <div id="box-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">행사 등록
+      <button class="btn btn-sm" onclick="addEvent()">+ 추가</button></div>
+    <div class="alert alert-info">상품명 파싱 키워드: <strong>[대면]버전A</strong> → 키워드 <strong>대면</strong></div>
+    <div id="event-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">현장수령 기준 <span style="color:var(--text3);font-weight:400">(당첨자 한정)</span>
+      <button class="btn btn-sm" onclick="addOnsite()">+ 추가</button></div>
+    <div class="alert alert-info">당첨자 현장수령 수량 — 배송 시 자동 차감됩니다.</div>
+    <div id="onsite-list"></div>
+  </div>
+</div>
+
+<!-- PAGE: UPLOAD -->
+<div id="page-upload" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">주문 <span>업로드</span></div>
+      <div class="page-desc">엑셀 업로드 → 해외 주소 자동 검증 → 합배 미리보기</div>
+    </div>
+  </div>
+
+  <!-- Step A: Upload file -->
+  <div class="card">
+    <div class="card-title">쇼핑몰 주문 엑셀 업로드</div>
+    <div class="alert alert-accent">
+      <strong>합배 기준:</strong> 응모자명 + 수령자명 + 주소 3가지 모두 일치 시만 합배 · 이름 성↔이름 순서 무관 · 띄어쓰기 무시<br>
+      <strong>해외 주소 자동 검증:</strong> 좌측에 Google API 키 입력 시, 비영문·불완전 주소를 자동으로 DHL/FedEx 표준 영문 주소로 수정합니다.
+    </div>
+    <div class="upload-zone" onclick="document.getElementById('fu').click()">
+      <div class="upload-zone-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text3)">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+        </svg>
+      </div>
+      <div style="font-size:14px;font-weight:500;margin-bottom:4px">클릭하여 .xlsx 또는 .csv 업로드</div>
+      <div style="font-size:12px;color:var(--text3)">헤더 행이 포함된 파일</div>
+    </div>
+    <input type="file" id="fu" accept=".xlsx,.csv" class="hidden" onchange="handleFile(event)">
+  </div>
+
+  <!-- Step B: Col map -->
+  <div id="sec-colmap" class="card hidden">
+    <div class="card-title">컬럼 매핑 확인 · 수정</div>
+    <div class="alert alert-warn">자동 인식된 매핑입니다. 잘못된 항목은 직접 선택해주세요.</div>
+    <div class="colmap-grid" id="colmap-ui"></div>
+    <div class="footer-row">
+      <button class="btn btn-accent" onclick="applyColMap()">주문 불러오기 →</button>
+    </div>
+  </div>
+
+  <!-- Step C: Address validation progress -->
+  <div id="sec-addr-progress" class="card hidden">
+    <div class="card-title">
+      <span><span class="spin"></span>해외 주소 Google 검증 중</span>
+      <span id="addr-prog-label" style="font-size:11px;color:var(--text3);font-family:var(--mono)"></span>
+    </div>
+    <div class="alert alert-google">Google Address Validation API로 실제 존재 여부 확인 및 표준 영문 주소로 변환 중입니다...</div>
+    <div class="prog-wrap"><div class="prog-bar" id="addr-prog-bar"></div></div>
+    <div class="prog-log" id="addr-prog-log"></div>
+  </div>
+
+  <!-- Step D: Address review (shown only if issues found) -->
+  <div id="sec-addr-review" class="card hidden">
+    <div class="card-title">
+      해외 주소 검증 결과 — 확인 및 수정
+      <div style="display:flex;gap:6px;align-items:center">
+        <span id="addr-ok-cnt" class="bk b-teal">자동수정 0건</span>
+        <span id="addr-warn-cnt" class="bk b-amber">주의 0건</span>
+        <span id="addr-err-cnt" class="bk b-red">오류 0건</span>
+      </div>
+    </div>
+    <div class="alert alert-google" id="addr-review-summary"></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>수령자</th><th>원본 주소</th>
+          <th>Street Line 1</th><th>Street Line 2</th>
+          <th>City</th><th>State</th><th>Postal</th><th>Country</th>
+          <th>DHL</th><th>FedEx</th><th>상태</th>
+        </tr></thead>
+        <tbody id="addr-review-tbody"></tbody>
+      </table>
+    </div>
+    <div class="footer-row">
+      <button class="btn btn-ghost" onclick="skipAddrReview()">이 상태로 진행</button>
+      <button class="btn btn-google" onclick="applyAddrFixes()">수정 사항 적용 후 다음 →</button>
+    </div>
+  </div>
+
+  <!-- Step E: Preview -->
+  <div id="sec-preview" class="card hidden">
+    <div class="card-title">
+      불러온 주문 · 합배 미리보기
+      <div style="display:flex;gap:6px;align-items:center">
+        <span id="upload-cnt" class="bk b-blue">0건</span>
+        <span id="merge-cnt" class="bk b-purple">합배 0그룹</span>
+        <span id="intl-cnt" class="bk b-google hidden">해외 0건</span>
+      </div>
+    </div>
+    <div id="merge-summary-box" class="alert alert-success"></div>
+    <div id="addr-fixed-summary" class="alert alert-google hidden"></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>합배</th><th>주문번호</th><th>주문자</th><th>수령자</th><th>응모자</th>
+          <th>연락처</th><th>이메일</th><th>주소</th><th>주소상태</th>
+          <th>상품명</th><th>행사</th><th>앨범</th><th>수량</th><th></th>
+        </tr></thead>
+        <tbody id="preview-tbody"></tbody>
+      </table>
+    </div>
+    <div class="footer-row">
+      <button class="btn btn-ghost" onclick="clearUpload()">초기화</button>
+      <button class="btn btn-accent" onclick="go('winner')">③ 당첨자 등록으로 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: WINNER -->
+<div id="page-winner" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">당첨자 <span>등록</span></div>
+      <div class="page-desc">합배 그룹별로 당첨 여부와 참석 여부를 설정합니다.</div>
+    </div>
+    <button class="btn btn-accent" onclick="go('result');generateResult()">④ 배송 명단 생성 →</button>
+  </div>
+  <div class="card">
+    <div class="alert alert-info">
+      <strong>참석</strong> → 현장수령 수량 차감 후 나머지 배송 &nbsp;|&nbsp;
+      <strong>미참석(대리수령)</strong> → 전량 배송 + 대리사인 필요 표시
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>수령자명</th><th>응모자명</th><th>연락처</th><th>주소</th>
+          <th>응모행사</th><th>총수량</th><th>당첨여부</th><th>참석여부</th>
+        </tr></thead>
+        <tbody id="winner-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: RESULT -->
+<div id="page-result" class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">배송 <span>명단</span></div>
+      <div class="page-desc">합배 완료된 최종 배송 리스트입니다.</div>
+    </div>
+    <button class="btn btn-accent" onclick="exportExcel()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      엑셀 다운로드
+    </button>
+  </div>
+  <div class="sum-grid" id="sum-row"></div>
+  <div class="card">
+    <div class="card-title">합배 배송 명단</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>No</th><th>수령자명</th><th>응모자명</th><th>연락처</th><th>이메일</th>
+          <th>주소</th><th>주소구분</th>
+          <th>앨범 구성</th><th>총수량</th><th>현장수령</th><th>배송수량</th>
+          <th>응모행사</th><th>특전</th><th>당첨</th><th>참석</th>
+          <th>박스</th><th>송장수</th><th>비고</th>
+        </tr></thead>
+        <tbody id="result-tbody"><tr><td colspan="18" class="empty">배송 명단을 생성해주세요</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</main>
+</div><!-- /shell -->
+
+<script>
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+const D = { albums:[], boxes:[], events:[], onsite:[], orders:[], winnerMap:{} };
+let rawH=[], rawR=[];
+// addrResults: map of order.id → parsed address object
+const addrResults = {};
+
+/* ═══════════════════════════════════════════
+   NAV
+═══════════════════════════════════════════ */
+const PAGES = ['setup','upload','winner','result'];
+function go(t) {
+  PAGES.forEach((id,i) => {
+    document.getElementById('page-'+id).classList.toggle('active', id===t);
+    document.querySelectorAll('.nav-item')[i].classList.toggle('active', id===t);
+  });
+  if (t==='winner') buildWinnerTable();
+}
+
+/* ═══════════════════════════════════════════
+   GOOGLE KEY  (localStorage 자동 저장)
+═══════════════════════════════════════════ */
+const KEY_STORAGE = 'signing_mgr_google_key';
+
+function getGoogleKey() { return document.getElementById('googleKey').value.trim(); }
+
+function setKeyUI(key, status) {
+  const dot  = document.getElementById('key-dot');
+  const hint = document.getElementById('key-hint');
+  const delBtn = document.getElementById('key-del-btn');
+  if (status === 'connected') {
+    dot.className = 'dot connected';
+    hint.textContent = '✓ 저장됨 — 해외 주소 자동 검증 활성화';
+    hint.style.color = 'var(--teal)';
+    delBtn.style.display = 'block';
+  } else if (status === 'empty') {
+    dot.className = 'dot';
+    hint.textContent = 'API 키를 입력하면 브라우저에 저장됩니다. 다음 방문 시 자동으로 불러옵니다.';
+    hint.style.color = '';
+    delBtn.style.display = 'none';
+  } else if (status === 'error') {
+    dot.className = 'dot';
+    hint.style.color = 'var(--red)';
+    delBtn.style.display = key ? 'block' : 'none';
+  }
+}
+
+function onKeyInput() {
+  const has = !!getGoogleKey();
+  setKeyUI(getGoogleKey(), has ? 'connected' : 'empty');
+  // 타이핑 중 자동저장 (디바운스)
+  clearTimeout(window._keySaveTimer);
+  window._keySaveTimer = setTimeout(() => {
+    const k = getGoogleKey();
+    if (k) localStorage.setItem(KEY_STORAGE, k);
+    else localStorage.removeItem(KEY_STORAGE);
+  }, 800);
+}
+
+function deleteKey() {
+  if (!confirm('저장된 API 키를 삭제할까요?')) return;
+  localStorage.removeItem(KEY_STORAGE);
+  document.getElementById('googleKey').value = '';
+  setKeyUI('', 'empty');
+}
+
+function loadSavedKey() {
+  const saved = localStorage.getItem(KEY_STORAGE);
+  if (saved) {
+    document.getElementById('googleKey').value = saved;
+    setKeyUI(saved, 'connected');
+  } else {
+    setKeyUI('', 'empty');
+  }
+}
+
+async function testGoogleKey() {
+  const key = getGoogleKey();
+  if (!key) { alert('API 키를 입력해주세요'); return; }
+  const hint = document.getElementById('key-hint');
+  hint.textContent = '연결 확인 중...';
+  hint.style.color = 'var(--text3)';
+  try {
+    await callGoogleValidate(key, '1600 Amphitheatre Parkway Mountain View CA');
+    localStorage.setItem(KEY_STORAGE, key);
+    setKeyUI(key, 'connected');
+  } catch(e) {
+    hint.textContent = '✗ 연결 실패: ' + e.message.slice(0,60);
+    setKeyUI(key, 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   GOOGLE ADDRESS VALIDATION API
+═══════════════════════════════════════════ */
+async function callGoogleValidate(apiKey, addressText, regionHint='') {
+  const body = { address: { addressLines: [addressText] } };
+  if (regionHint) body.address.regionCode = regionHint;
+  const res = await fetch(
+    `https://addressvalidation.googleapis.com/v1:validateAddress?key=${encodeURIComponent(apiKey)}`,
+    { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// detect if address is international (non-Korean)
+function isInternational(addr) {
+  if (!addr) return false;
+  const hasKorean = /[가-힣]/.test(addr);
+  const hasNumber = /\d/.test(addr);
+  const hasLatin = /[a-zA-Z]/.test(addr);
+  // If no Korean at all and has Latin letters with numbers → likely international
+  if (!hasKorean && hasLatin && hasNumber) return true;
+  // If clearly Korean
+  if (hasKorean) return false;
+  // Pure Latin (e.g. "New York, NY") → international
+  if (!hasKorean && hasLatin) return true;
+  return false;
+}
+
+const STATE_MAPS = {
+  US:{'Alabama':'AL','Alaska':'AK','Arizona':'AZ','Arkansas':'AR','California':'CA','Colorado':'CO','Connecticut':'CT','Delaware':'DE','Florida':'FL','Georgia':'GA','Hawaii':'HI','Idaho':'ID','Illinois':'IL','Indiana':'IN','Iowa':'IA','Kansas':'KS','Kentucky':'KY','Louisiana':'LA','Maine':'ME','Maryland':'MD','Massachusetts':'MA','Michigan':'MI','Minnesota':'MN','Mississippi':'MS','Missouri':'MO','Montana':'MT','Nebraska':'NE','Nevada':'NV','New Hampshire':'NH','New Jersey':'NJ','New Mexico':'NM','New York':'NY','North Carolina':'NC','North Dakota':'ND','Ohio':'OH','Oklahoma':'OK','Oregon':'OR','Pennsylvania':'PA','Rhode Island':'RI','South Carolina':'SC','South Dakota':'SD','Tennessee':'TN','Texas':'TX','Utah':'UT','Vermont':'VT','Virginia':'VA','Washington':'WA','West Virginia':'WV','Wisconsin':'WI','Wyoming':'WY','District of Columbia':'DC'},
+  CA:{'Ontario':'ON','Quebec':'QC','British Columbia':'BC','Alberta':'AB','Manitoba':'MB','Saskatchewan':'SK','Nova Scotia':'NS','New Brunswick':'NB','Newfoundland and Labrador':'NL','Prince Edward Island':'PE','Northwest Territories':'NT','Yukon':'YT','Nunavut':'NU'},
+  AU:{'New South Wales':'NSW','Victoria':'VIC','Queensland':'QLD','South Australia':'SA','Western Australia':'WA','Tasmania':'TAS','Australian Capital Territory':'ACT','Northern Territory':'NT'},
+  MX:{'Aguascalientes':'AGU','Baja California':'BCN','Baja California Sur':'BCS','Campeche':'CAM','Chiapas':'CHP','Chihuahua':'CHH','Ciudad de México':'CMX','Coahuila':'COA','Colima':'COL','Durango':'DUR','Guanajuato':'GTO','Guerrero':'GRO','Hidalgo':'HID','Jalisco':'JAL','Michoacán':'MIC','Morelos':'MOR','Nayarit':'NAY','Nuevo León':'NLE','Oaxaca':'OAX','Puebla':'PUE','Querétaro':'QUE','Quintana Roo':'ROO','San Luis Potosí':'SLP','Sinaloa':'SIN','Sonora':'SON','Tabasco':'TAB','Tamaulipas':'TAM','Tlaxcala':'TLA','Veracruz':'VER','Yucatán':'YUC','Zacatecas':'ZAC'}
+};
+const COUNTRY_MAP = {'United States':'US','United States of America':'US','USA':'US','United Kingdom':'GB','Great Britain':'GB','England':'GB','UK':'GB','Canada':'CA','Australia':'AU','Germany':'DE','France':'FR','Japan':'JP','South Korea':'KR','Korea':'KR','China':'CN','Hong Kong':'HK','Taiwan':'TW','Singapore':'SG','Thailand':'TH','Philippines':'PH','Indonesia':'ID','Malaysia':'MY','Vietnam':'VN','India':'IN','Brazil':'BR','Mexico':'MX','Argentina':'AR','Italy':'IT','Spain':'ES','Portugal':'PT','Netherlands':'NL','Belgium':'BE','Switzerland':'CH','Austria':'AT','Sweden':'SE','Norway':'NO','Denmark':'DK','Finland':'FI','Poland':'PL','Czech Republic':'CZ','Czechia':'CZ','Hungary':'HU','Romania':'RO','Turkey':'TR','Russia':'RU','Ukraine':'UA','New Zealand':'NZ','South Africa':'ZA','United Arab Emirates':'AE','UAE':'AE','Saudi Arabia':'SA'};
+
+function inferCountryCode(name) {
+  if (!name) return '';
+  const n = name.trim();
+  if (n.length===2 && n===n.toUpperCase()) return n;
+  return COUNTRY_MAP[n] || COUNTRY_MAP[Object.keys(COUNTRY_MAP).find(k=>k.toLowerCase()===n.toLowerCase())] || '';
+}
+function inferStateCode(state, cc) {
+  if (!state||!cc) return state||'';
+  const s = state.trim();
+  if (s.length<=3 && s===s.toUpperCase()) return s;
+  const map = STATE_MAPS[cc];
+  if (!map) return s;
+  return map[s] || map[Object.keys(map).find(k=>k.toLowerCase()===s.toLowerCase())] || s;
+}
+function inferRegion(text) {
+  if (!text) return '';
+  const t = text.toUpperCase();
+  const checks=[['UNITED STATES','US'],['USA','US'],['UNITED KINGDOM','GB'],['UK','GB'],['CANADA','CA'],['AUSTRALIA','AU'],['GERMANY','DE'],['FRANCE','FR'],['JAPAN','JP'],['SOUTH KOREA','KR'],['KOREA','KR'],['CHINA','CN'],['HONG KONG','HK'],['TAIWAN','TW'],['SINGAPORE','SG'],['THAILAND','TH'],['PHILIPPINES','PH'],['INDONESIA','ID'],['MALAYSIA','MY'],['VIETNAM','VN'],['INDIA','IN'],['BRAZIL','BR'],['MEXICO','MX'],['ITALY','IT'],['SPAIN','ES'],['NETHERLANDS','NL'],['NEW ZEALAND','NZ'],['UAE','AE'],['SAUDI','SA']];
+  for (const [k,v] of checks) if (t.includes(k)) return v;
+  return '';
+}
+
+function parseGoogleResult(data) {
+  const result = data.result||{};
+  const verdict = result.verdict||{};
+  const addr = result.address||{};
+  const components = addr.addressComponents||[];
+  const formatted = addr.formattedAddress||'';
+
+  const get = (...types) => { for (const t of types) { const c=components.find(x=>x.componentType===t); if (c) return c.componentName?.text||''; } return ''; };
+
+  const streetNum = get('street_number');
+  const route = get('route','street_address');
+  const sl1 = [streetNum, route].filter(Boolean).join(' ') || get('premise','establishment','point_of_interest');
+  const sl2 = [get('subpremise'), get('floor'), get('room')].filter(Boolean).join(', ');
+  const city = get('locality','sublocality_level_1','administrative_area_level_3','administrative_area_level_2','postal_town');
+  const stateRaw = get('administrative_area_level_1');
+  const postal = get('postal_code');
+  const countryName = get('country');
+  const cc = inferCountryCode(countryName);
+  const stateCode = inferStateCode(stateRaw, cc);
+
+  const needsState = ['US','CA','MX'].includes(cc);
+  const dhlReady = !!(sl1 && city && cc);
+  const fedexReady = !!(sl1 && city && cc && (!needsState || stateCode));
+
+  const issues = [];
+  if (!sl1) issues.push('거리 주소 없음');
+  if (!city) issues.push('도시 없음');
+  if (!cc) issues.push('국가 인식 불가');
+  if (needsState && !stateCode) issues.push(`${cc} State/Province 필수`);
+  if (verdict.hasUnconfirmedComponents) issues.push('일부 주소 미확인');
+  if (verdict.possibleNextAction==='FIX') issues.push('수정 필요');
+
+  const status = !sl1||!city||!cc ? 'err' : issues.length ? 'warn' : 'ok';
+
+  return { sl1, sl2, city, state:stateCode||stateRaw, postal, cc, countryName, formatted, dhlReady, fedexReady, issues, status, granularity: verdict.validationGranularity||'' };
+}
+
+/* ═══════════════════════════════════════════
+   NAME MATCHING
+═══════════════════════════════════════════ */
+function normName(s){return String(s||'').replace(/\s+/g,'').toLowerCase()}
+function isKorean(s){return /[가-힣]/.test(s)}
+function sameNameTokens(a,b){
+  if(isKorean(a)&&isKorean(b)) return [...a].sort().join('')===[...b].sort().join('');
+  const wa=new Set(a.split(/[\s_]+/).filter(Boolean)),wb=new Set(b.split(/[\s_]+/).filter(Boolean));
+  if(wa.size!==wb.size) return false;
+  for(const w of wa) if(!wb.has(w)) return false;
+  return true;
+}
+function sameName(a,b){const na=normName(a),nb=normName(b);if(!na||!nb)return false;if(na===nb)return true;return sameNameTokens(na,nb)}
+function normAddr(s){return String(s||'').replace(/\s+/g,'').toLowerCase()}
+function nameKey(s){const n=normName(s);if(isKorean(n))return[...n].sort().join('');return n.split(/[\s_]+/).filter(Boolean).sort().join('_')}
+function mergeKey(applicant,receiver,addr){return nameKey(applicant)+'|||'+nameKey(receiver)+'|||'+normAddr(addr)}
+
+/* ═══════════════════════════════════════════
+   GROUPING
+═══════════════════════════════════════════ */
+function groupOrders(orders){
+  const keyToGroup={},groups=[];
+  orders.forEach((o,i)=>{
+    const k=mergeKey(o.applicant,o.receiver,o.addr);
+    if(keyToGroup[k]===undefined){keyToGroup[k]=groups.length;groups.push([]);}
+    groups[keyToGroup[k]].push(i);
+  });
+  return groups.map((idxArr,gi)=>({
+    groupId:gi+1,
+    orders:idxArr.map(i=>orders[i]),
+    mergeKey:mergeKey(orders[idxArr[0]].applicant,orders[idxArr[0]].receiver,orders[idxArr[0]].addr)
+  }));
+}
+
+/* ═══════════════════════════════════════════
+   SETUP
+═══════════════════════════════════════════ */
+function renderAlbums(){
+  document.getElementById('album-list').innerHTML=D.albums.length
+    ?D.albums.map((a,i)=>`<div class="ritem">
+      <div><label>앨범명</label><input value="${esc(a.name)}" onchange="D.albums[${i}].name=this.value" placeholder="버전A"></div>
+      <div><label>가로(cm)</label><input type="number" step=".1" value="${a.w}" onchange="D.albums[${i}].w=+this.value"></div>
+      <div><label>세로(cm)</label><input type="number" step=".1" value="${a.h}" onchange="D.albums[${i}].h=+this.value"></div>
+      <div><label>높이(cm)</label><input type="number" step=".1" value="${a.d}" onchange="D.albums[${i}].d=+this.value"></div>
+      <div><label>무게(g)</label><input type="number" value="${a.g}" onchange="D.albums[${i}].g=+this.value"></div>
+      <div class="fx0"><button class="btn btn-del" onclick="D.albums.splice(${i},1);renderAlbums()">삭제</button></div>
+    </div>`).join('')
+    :'<p style="color:var(--text3);font-size:12px;padding:6px 0">앨범을 추가해주세요</p>';
+}
+function addAlbum(){if(D.albums.length>=5){alert('최대 5종');return}D.albums.push({name:'',w:0,h:0,d:0,g:0});renderAlbums()}
+
+function renderBoxes(){
+  document.getElementById('box-list').innerHTML=D.boxes.length
+    ?D.boxes.map((b,i)=>`<div class="ritem">
+      <div><label>박스명</label><input value="${esc(b.name)}" onchange="D.boxes[${i}].name=this.value" placeholder="소박스"></div>
+      <div><label>가로(cm)</label><input type="number" step=".1" value="${b.w}" onchange="D.boxes[${i}].w=+this.value"></div>
+      <div><label>세로(cm)</label><input type="number" step=".1" value="${b.h}" onchange="D.boxes[${i}].h=+this.value"></div>
+      <div><label>높이(cm)</label><input type="number" step=".1" value="${b.d}" onchange="D.boxes[${i}].d=+this.value"></div>
+      <div class="fx0"><button class="btn btn-del" onclick="D.boxes.splice(${i},1);renderBoxes()">삭제</button></div>
+    </div>`).join('')
+    :'<p style="color:var(--text3);font-size:12px;padding:6px 0">박스를 추가해주세요</p>';
+}
+function addBox(){D.boxes.push({name:'',w:0,h:0,d:0});renderBoxes()}
+
+function renderEvents(){
+  document.getElementById('event-list').innerHTML=D.events.length
+    ?D.events.map((e,i)=>`<div class="ritem">
+      <div><label>행사명</label><input value="${esc(e.type)}" onchange="D.events[${i}].type=this.value" placeholder="대면사인회"></div>
+      <div><label>파싱 키워드</label><input value="${esc(e.kw)}" onchange="D.events[${i}].kw=this.value" placeholder="대면"></div>
+      <div style="flex:2"><label>특전 내용</label><input value="${esc(e.gift)}" onchange="D.events[${i}].gift=this.value" placeholder="포토카드 1종 등"></div>
+      <div class="fx0"><button class="btn btn-del" onclick="D.events.splice(${i},1);renderEvents()">삭제</button></div>
+    </div>`).join('')
+    :'<p style="color:var(--text3);font-size:12px;padding:6px 0">행사를 추가해주세요</p>';
+}
+function addEvent(){D.events.push({type:'',kw:'',gift:''});renderEvents()}
+
+function renderOnsite(){
+  document.getElementById('onsite-list').innerHTML=D.onsite.length
+    ?D.onsite.map((r,i)=>`<div class="ritem">
+      <div><label>행사</label><select onchange="D.onsite[${i}].event=this.value">
+        ${D.events.map(e=>`<option value="${esc(e.type)}" ${r.event===e.type?'selected':''}>${e.type||'(미입력)'}</option>`).join('')}
+      </select></div>
+      <div><label>현장수령 수량</label><input type="number" min="0" value="${r.qty}" onchange="D.onsite[${i}].qty=+this.value"></div>
+      <div class="fx0"><button class="btn btn-del" onclick="D.onsite.splice(${i},1);renderOnsite()">삭제</button></div>
+    </div>`).join('')
+    :'<p style="color:var(--text3);font-size:12px;padding:6px 0">기준을 추가해주세요</p>';
+}
+function addOnsite(){D.onsite.push({event:D.events[0]?D.events[0].type:'',qty:1});renderOnsite()}
+function clearSetup(){D.albums=[];D.boxes=[];D.events=[];D.onsite=[];renderAlbums();renderBoxes();renderEvents();renderOnsite()}
+function saveSetup(){
+  if(!D.albums.length){alert('앨범을 등록해주세요');return}
+  if(!D.boxes.length){alert('박스를 등록해주세요');return}
+  go('upload');
+}
+
+/* ═══════════════════════════════════════════
+   UPLOAD
+═══════════════════════════════════════════ */
+const FA={
+  orderNum:['주문번호','주문 번호','order no','orderid','주문id','no'],
+  buyer:['주문자명','주문자','구매자명','구매자','buyer'],
+  receiver:['수령자명','수령자','받는분','받는사람','수취인'],
+  applicant:['응모자명','응모자','팬명','신청자명','신청자'],
+  phone:['연락처','전화번호','휴대폰','핸드폰','phone','tel'],
+  email:['이메일','email','e-mail','메일'],
+  addr:['주소','배송지','배송주소','address','배송지주소'],
+  product:['상품명','상품','품목','product','item명','item'],
+  qty:['수량','qty','quantity','개수','갯수']
+};
+function guessCol(headers,field){
+  for(const h of headers)
+    for(const a of FA[field]||[])
+      if(String(h).toLowerCase().replace(/\s/g,'').includes(a.toLowerCase().replace(/\s/g,''))) return h;
+  return '';
+}
+function handleFile(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      rawH=rows[0]||[];
+      rawR=rows.slice(1).filter(r=>r&&r.some(c=>c!==undefined&&c!==''));
+      buildColMapUI();
+    }catch(err){alert('파일 오류: '+err.message)}
+  };
+  r.readAsBinaryString(f);e.target.value='';
+}
+function buildColMapUI(){
+  document.getElementById('sec-colmap').classList.remove('hidden');
+  const opts=['(없음)',...rawH].map(h=>`<option value="${esc(String(h))}">${esc(String(h))}</option>`).join('');
+  const fields=[
+    {k:'orderNum',l:'주문번호'},{k:'buyer',l:'주문자명'},{k:'receiver',l:'수령자명'},
+    {k:'applicant',l:'응모자명'},{k:'phone',l:'연락처'},{k:'email',l:'이메일'},
+    {k:'addr',l:'주소'},{k:'product',l:'상품명 (앨범+행사)'},{k:'qty',l:'수량'}
+  ];
+  document.getElementById('colmap-ui').innerHTML=fields.map(f=>{
+    const g=guessCol(rawH,f.k);
+    return `<span>${f.l}</span><select id="cm-${f.k}">${opts.replace(`value="${esc(g)}"`,`value="${esc(g)}" selected`)}</select>`;
+  }).join('');
+}
+function parseEvent(p){for(const ev of D.events){if(ev.kw&&p.includes(ev.kw))return ev.type}return p}
+function parseAlbum(p){
+  let s=p.replace(/[\[\]【】()（）]/g,' ');
+  for(const ev of D.events){if(ev.kw)s=s.replace(new RegExp(ev.kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),' ')}
+  return s.replace(/\s+/g,' ').trim()||p;
+}
+function gv(row,field){
+  const col=window._cm&&window._cm[field];if(!col)return'';
+  const idx=rawH.indexOf(col);return idx>=0?String(row[idx]??'').trim():'';
+}
+
+async function applyColMap(){
+  const fields=['orderNum','buyer','receiver','applicant','phone','email','addr','product','qty'];
+  window._cm={};
+  fields.forEach(f=>{const v=document.getElementById('cm-'+f).value;window._cm[f]=v==='(없음)'?null:v;});
+
+  D.orders=rawR.map((row,i)=>{
+    const buyer=gv(row,'buyer');
+    const receiver=gv(row,'receiver')||buyer;
+    const applicant=gv(row,'applicant')||buyer;
+    const pName=gv(row,'product');
+    return {
+      id:i,num:gv(row,'orderNum'),buyer,receiver,applicant,
+      phone:gv(row,'phone'),email:gv(row,'email'),addr:gv(row,'addr'),
+      productName:pName,event:parseEvent(pName),album:parseAlbum(pName),
+      qty:+gv(row,'qty')||1,
+      addrType:'domestic', // 'domestic' | 'international' | 'fixed' | 'error'
+      addrFixed:null
+    };
+  }).filter(o=>o.buyer||o.receiver);
+
+  // Detect international addresses
+  D.orders.forEach(o=>{
+    if(isInternational(o.addr)) o.addrType='international';
+  });
+
+  const intlOrders = D.orders.filter(o=>o.addrType==='international');
+  const key = getGoogleKey();
+
+  if(intlOrders.length>0 && key){
+    // Run Google validation
+    await runAddrValidation(intlOrders, key);
+  } else {
+    // Skip validation, go straight to preview
+    renderPreview();
+    document.getElementById('sec-preview').classList.remove('hidden');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ADDRESS VALIDATION
+═══════════════════════════════════════════ */
+async function runAddrValidation(intlOrders, key){
+  document.getElementById('sec-addr-progress').classList.remove('hidden');
+  const bar=document.getElementById('addr-prog-bar');
+  const lbl=document.getElementById('addr-prog-label');
+  const log=document.getElementById('addr-prog-log');
+  bar.style.width='0%'; log.innerHTML='';
+
+  for(let i=0;i<intlOrders.length;i++){
+    const o=intlOrders[i];
+    bar.style.width=Math.round((i/intlOrders.length)*100)+'%';
+    lbl.textContent=`${i+1} / ${intlOrders.length}`;
+    log.innerHTML+=`<div>→ ${o.receiver||o.buyer} : ${o.addr.slice(0,55)}...</div>`;
+    log.scrollTop=log.scrollHeight;
+
+    try{
+      const regionHint=inferRegion(o.addr);
+      const data=await callGoogleValidate(key, o.addr, regionHint);
+      const parsed=parseGoogleResult(data);
+      addrResults[o.id]=parsed;
+      const icon=parsed.status==='ok'?'✓':parsed.status==='warn'?'⚠':'✗';
+      const color=parsed.status==='ok'?'var(--teal)':parsed.status==='warn'?'var(--amber)':'var(--red)';
+      log.innerHTML+=`<div style="color:${color}">  ${icon} ${parsed.formatted.slice(0,65)}</div>`;
+    }catch(err){
+      addrResults[o.id]={status:'err',issues:['API 오류: '+err.message.slice(0,50)],sl1:'',sl2:'',city:'',state:'',postal:'',cc:'',formatted:''};
+      log.innerHTML+=`<div style="color:var(--red)">  ✗ 오류: ${err.message.slice(0,50)}</div>`;
+    }
+    log.scrollTop=log.scrollHeight;
+    await new Promise(r=>setTimeout(r,180));
+  }
+  bar.style.width='100%';
+  lbl.textContent='완료!';
+
+  setTimeout(()=>{
+    document.getElementById('sec-addr-progress').classList.add('hidden');
+    showAddrReview(intlOrders);
+  },600);
+}
+
+function showAddrReview(intlOrders){
+  const okList=intlOrders.filter(o=>addrResults[o.id]?.status==='ok');
+  const warnList=intlOrders.filter(o=>addrResults[o.id]?.status==='warn');
+  const errList=intlOrders.filter(o=>addrResults[o.id]?.status==='err');
+
+  document.getElementById('addr-ok-cnt').textContent=`자동수정 ${okList.length}건`;
+  document.getElementById('addr-warn-cnt').textContent=`주의 ${warnList.length}건`;
+  document.getElementById('addr-err-cnt').textContent=`오류 ${errList.length}건`;
+
+  document.getElementById('addr-review-summary').innerHTML=
+    `총 <strong>${intlOrders.length}건</strong>의 해외 주소를 검증했습니다. `+
+    `<strong style="color:var(--teal)">${okList.length}건</strong> 자동 수정 완료 · `+
+    `<strong style="color:var(--amber)">${warnList.length}건</strong> 확인 필요 · `+
+    `<strong style="color:var(--red)">${errList.length}건</strong> 오류 (직접 수정 필요).<br>`+
+    (errList.length||warnList.length ? '아래 표에서 수정 후 "수정 사항 적용" 버튼을 눌러주세요.' : '모두 자동 수정되었습니다. 바로 진행하세요.');
+
+  // Build review table — show all intl orders
+  document.getElementById('addr-review-tbody').innerHTML=intlOrders.map(o=>{
+    const p=addrResults[o.id];
+    if(!p) return '';
+    const statusCls=p.status==='ok'?'b-teal':p.status==='warn'?'b-amber':'b-red';
+    const statusTxt=p.status==='ok'?'자동수정':p.status==='warn'?'주의':'오류';
+
+    const ie=(field,val,cls='')=>`<input class="inline-edit ${cls}" data-oid="${o.id}" data-field="${field}" value="${esc(val||'')}" onchange="updateAddrField(${o.id},'${field}',this.value)">`;
+
+    const needsState=['US','CA','MX'].includes(p.cc);
+    const stateCls=needsState&&!p.state?'err':'';
+    const zipCls=!p.postal&&['US','GB','CA','AU','DE','FR','JP'].includes(p.cc)?'err':'';
+    const sl1Cls=!p.sl1?'err':'';
+    const cityCls=!p.city?'err':'';
+    const ccCls=!p.cc?'err':'';
+
+    return `<tr class="addr-review-row">
+      <td style="font-weight:500;white-space:nowrap">${o.receiver||o.buyer}<br><span style="font-size:10px;color:var(--text3)">${o.num}</span></td>
+      <td><div class="addr-original">${o.addr}</div>${p.issues.length?`<div class="addr-issue">${p.issues.join(' · ')}</div>`:''}</td>
+      <td>${ie('sl1',p.sl1,sl1Cls)}</td>
+      <td>${ie('sl2',p.sl2)}</td>
+      <td>${ie('city',p.city,cityCls)}</td>
+      <td>${ie('state',p.state,stateCls)}</td>
+      <td>${ie('postal',p.postal,zipCls)}</td>
+      <td>${ie('cc',p.cc,ccCls)}</td>
+      <td>${p.dhlReady?'<span class="bk b-teal">✓</span>':'<span class="bk b-red">✗</span>'}</td>
+      <td>${p.fedexReady?'<span class="bk b-teal">✓</span>':'<span class="bk b-red">✗</span>'}</td>
+      <td><span class="bk ${statusCls}">${statusTxt}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('sec-addr-review').classList.remove('hidden');
+}
+
+function updateAddrField(oid, field, val){
+  if(!addrResults[oid]) return;
+  addrResults[oid][field]=val.trim();
+  const p=addrResults[oid];
+  p.dhlReady=!!(p.sl1&&p.city&&p.cc);
+  const ns=['US','CA','MX'].includes(p.cc?.toUpperCase());
+  p.fedexReady=!!(p.sl1&&p.city&&p.cc&&(!ns||p.state));
+  // Re-derive issues
+  const issues=[];
+  if(!p.sl1) issues.push('거리주소 없음');
+  if(!p.city) issues.push('도시 없음');
+  if(!p.cc) issues.push('국가코드 없음');
+  if(ns&&!p.state) issues.push('State 필수');
+  p.issues=issues;
+  p.status=!p.sl1||!p.city||!p.cc?'err':issues.length?'warn':'ok';
+}
+
+function applyAddrFixes(){
+  // Apply fixed addresses back to orders
+  D.orders.forEach(o=>{
+    const p=addrResults[o.id];
+    if(!p) return;
+    const parts=[p.sl1,p.sl2,p.city,p.state,p.postal,p.cc].filter(Boolean);
+    const fixedAddr=parts.join(', ');
+    o.addrFixed=fixedAddr;
+    o.addrParsed=p;
+    o.addrType=p.status==='ok'?'fixed':p.status==='warn'?'warn':'error';
+    // Replace addr used for mergeKey with fixed version for better matching
+    if(p.status==='ok'||p.status==='warn') o.addr=fixedAddr;
+  });
+  document.getElementById('sec-addr-review').classList.add('hidden');
+  renderPreview();
+  document.getElementById('sec-preview').classList.remove('hidden');
+  document.getElementById('sec-preview').scrollIntoView({behavior:'smooth'});
+}
+
+function skipAddrReview(){
+  // Apply whatever we have without review
+  D.orders.forEach(o=>{
+    const p=addrResults[o.id];
+    if(!p) return;
+    const parts=[p.sl1,p.sl2,p.city,p.state,p.postal,p.cc].filter(Boolean);
+    if(parts.length>1){
+      o.addrFixed=parts.join(', ');
+      o.addrParsed=p;
+      o.addrType=p.status==='ok'?'fixed':'warn';
+      o.addr=o.addrFixed;
+    }
+  });
+  document.getElementById('sec-addr-review').classList.add('hidden');
+  renderPreview();
+  document.getElementById('sec-preview').classList.remove('hidden');
+}
+
+/* ═══════════════════════════════════════════
+   PREVIEW
+═══════════════════════════════════════════ */
+function renderPreview(){
+  const groups=groupOrders(D.orders);
+  const mergeGroups=groups.filter(g=>g.orders.length>1);
+  const intlOrders=D.orders.filter(o=>o.addrType!=='domestic');
+
+  document.getElementById('upload-cnt').textContent=D.orders.length+'건';
+  document.getElementById('merge-cnt').textContent='합배 '+mergeGroups.length+'그룹';
+
+  const intlEl=document.getElementById('intl-cnt');
+  if(intlOrders.length>0){
+    intlEl.textContent='해외 '+intlOrders.length+'건';
+    intlEl.classList.remove('hidden');
+  } else {
+    intlEl.classList.add('hidden');
+  }
+
+  document.getElementById('merge-summary-box').innerHTML=
+    `총 <strong>${D.orders.length}건</strong> → <strong>${groups.length}개</strong> 배송지 합배 처리됩니다.`+
+    (mergeGroups.length?` 합배 그룹 <strong>${mergeGroups.length}개</strong> (보라색 표시)`:'');
+
+  const fixedCount=D.orders.filter(o=>o.addrType==='fixed').length;
+  const errCount=D.orders.filter(o=>o.addrType==='error').length;
+  const fixedSummary=document.getElementById('addr-fixed-summary');
+  if(fixedCount>0||errCount>0){
+    fixedSummary.classList.remove('hidden');
+    fixedSummary.innerHTML=`Google 주소 검증 완료: <strong style="color:var(--teal)">${fixedCount}건 자동 수정</strong>`+
+      (errCount?` · <strong style="color:var(--red)">${errCount}건 오류 (주소 확인 필요)</strong>`:'');
+    // update nav badge
+    if(errCount>0){
+      document.getElementById('nav-addr-badge').classList.remove('hidden');
+    }
+  } else {
+    fixedSummary.classList.add('hidden');
+  }
+
+  let html='';
+  groups.forEach(g=>{
+    const isMerge=g.orders.length>1;
+    g.orders.forEach(o=>{
+      const idx=D.orders.indexOf(o);
+      let addrStatusHtml='';
+      if(o.addrType==='fixed') addrStatusHtml='<span class="addr-fixed">Google수정</span>';
+      else if(o.addrType==='warn') addrStatusHtml='<span class="bk b-amber">주의</span>';
+      else if(o.addrType==='error') addrStatusHtml='<span class="addr-err">오류</span>';
+      else if(o.addrType==='international') addrStatusHtml='<span class="addr-intl">해외</span>';
+
+      html+=`<tr>
+        <td><span class="bk ${isMerge?'b-purple':'b-gray'}">${isMerge?'합배'+g.groupId:'개별'}</span></td>
+        <td style="font-family:var(--mono);font-size:11px">${o.num}</td>
+        <td>${o.buyer}</td>
+        <td style="font-weight:500">${o.receiver}</td>
+        <td>${o.applicant}</td>
+        <td style="font-family:var(--mono);font-size:11px">${o.phone}</td>
+        <td style="font-size:11px">${o.email}</td>
+        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(o.addr)}">${o.addr}</td>
+        <td class="addr-status-cell">${addrStatusHtml}</td>
+        <td style="font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.productName}</td>
+        <td><span class="bk b-teal">${o.event}</span></td>
+        <td><span class="bk b-blue">${o.album}</span></td>
+        <td style="text-align:center;font-family:var(--mono)">${o.qty}</td>
+        <td><button class="btn btn-del btn-sm" onclick="D.orders.splice(${idx},1);renderPreview()">삭제</button></td>
+      </tr>`;
+    });
+  });
+  document.getElementById('preview-tbody').innerHTML=html||'<tr><td colspan="14" class="empty">데이터 없음</td></tr>';
+  window._groups=groups;
+}
+
+function clearUpload(){
+  D.orders=[];
+  ['sec-preview','sec-colmap','sec-addr-review','sec-addr-progress'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  document.getElementById('nav-addr-badge').classList.add('hidden');
+}
+
+/* ═══════════════════════════════════════════
+   WINNER
+═══════════════════════════════════════════ */
+function buildWinnerTable(){
+  if(!D.orders.length){document.getElementById('winner-tbody').innerHTML='<tr><td colspan="8" class="empty">먼저 주문을 업로드해주세요</td></tr>';return}
+  const groups=groupOrders(D.orders);
+  window._groups=groups;
+  document.getElementById('winner-tbody').innerHTML=groups.map(g=>{
+    const rep=g.orders[0];
+    const events=[...new Set(g.orders.map(o=>o.event))].join(', ');
+    const totalQty=g.orders.reduce((s,o)=>s+(+o.qty),0);
+    const w=D.winnerMap[g.mergeKey]||{won:'N',attend:'미정'};
+    return `<tr>
+      <td style="font-weight:500">${rep.receiver}</td>
+      <td>${rep.applicant}</td>
+      <td style="font-family:var(--mono);font-size:11px">${rep.phone}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(rep.addr)}">${rep.addr}</td>
+      <td><span class="bk b-teal">${events}</span>${g.orders.length>1?`<span class="merge-badge">합배${g.orders.length}건</span>`:''}</td>
+      <td style="text-align:center;font-family:var(--mono);font-weight:500">${totalQty}</td>
+      <td><select onchange="setWinner('${escKey(g.mergeKey)}','won',this.value,'${g.groupId}')">
+        <option value="N" ${w.won!=='Y'?'selected':''}>미당첨</option>
+        <option value="Y" ${w.won==='Y'?'selected':''}>당첨</option>
+      </select></td>
+      <td id="ws-${g.groupId}">${attendCell(g.mergeKey,w,g.groupId)}</td>
+    </tr>`;
+  }).join('');
+}
+function attendCell(mk,w,gid){
+  if(w.won!=='Y') return '<span class="bk b-gray" style="font-size:11px">해당없음</span>';
+  return `<select onchange="setWinner('${escKey(mk)}','attend',this.value,'${gid}')">
+    <option value="미정" ${w.attend==='미정'?'selected':''}>미정</option>
+    <option value="Y" ${w.attend==='Y'?'selected':''}>참석</option>
+    <option value="N" ${w.attend==='N'?'selected':''}>미참석(대리수령)</option>
+  </select>`;
+}
+function setWinner(mk,field,val,gid){
+  if(!D.winnerMap[mk]) D.winnerMap[mk]={won:'N',attend:'미정'};
+  D.winnerMap[mk][field]=val;
+  const cell=document.getElementById('ws-'+gid);
+  if(cell) cell.innerHTML=attendCell(mk,D.winnerMap[mk],gid);
+}
+
+/* ═══════════════════════════════════════════
+   BOX CALC
+   ─ 박스 유효 공간 = 각 방향 - 1cm 여유 (포장재 여유)
+   ─ 앨범은 납작하므로 높이(두께) 방향으로 쌓는 방식으로 계산
+   ─ 여러 종류 앨범이 섞일 경우 각 앨범의 가로·세로가
+     박스 유효 가로·세로 안에 들어오는지 먼저 확인
+   ─ 들어오는 앨범 세트를 1회 쌓을 때 필요한 높이를 계산해서
+     박스 유효 높이 안에 몇 세트 들어가는지 산출
+   ─ 박스 분할 횟수(송장 수) = ceil(총세트수 / 박스당세트수)
+═══════════════════════════════════════════ */
+const BOX_MARGIN = 1; // cm — 가로·세로·높이 각각 차감
+
+function bestBox(albumQtys) {
+  if (!D.boxes.length) return { name:'박스미설정', cnt:1, detail:'' };
+
+  // albumQtys: [{album, qty}]  e.g. [{album:'버전A', qty:3}, {album:'버전B', qty:2}]
+  // 각 앨범 정보 조회
+  const items = albumQtys.map(({album, qty}) => {
+    const a = D.albums.find(x => x.name === album);
+    return a ? { name:album, w:a.w, h:a.h, d:a.d, qty } : null;
+  }).filter(Boolean);
+
+  if (!items.length) return { name:'앨범정보없음', cnt:1, detail:'' };
+
+  // 앨범 중 가장 큰 가로·세로 (박스에 눕혀 놓는다고 가정)
+  // 앨범은 정사각형에 가까우므로 w×h footprint 기준
+  const maxAlbumW = Math.max(...items.map(i => i.w));
+  const maxAlbumH = Math.max(...items.map(i => i.h));
+
+  // 한 세트(모든 앨범 종류를 1장씩)의 총 두께(높이) 계산
+  // 동일 종류 n장을 한 묶음으로 쌓을 때 두께 = d * qty
+  const totalStackH = items.reduce((sum, i) => sum + i.d * i.qty, 0);
+  // 총 앨범 수 (송장 기준 판단용)
+  const totalQty = items.reduce((sum, i) => sum + i.qty, 0);
+
+  // 박스 후보: 작은 것부터 정렬
+  const sorted = [...D.boxes].sort((a, b) => a.w*a.h*a.d - b.w*b.h*b.d);
+
+  // 각 박스에 대해 "들어가는지" + "몇 박스 필요한지" 계산
+  for (const box of sorted) {
+    // 유효 내부 공간 (각 방향 1cm 여유 차감)
+    const effW = box.w - BOX_MARGIN;
+    const effH = box.h - BOX_MARGIN;
+    const effD = box.d - BOX_MARGIN;
+
+    // 앨범 footprint이 박스 유효 가로·세로 안에 들어오는지 확인
+    // 방향1: 앨범 w→박스 effW, 앨범 h→박스 effH
+    // 방향2: 앨범 h→박스 effW, 앨범 w→박스 effH (90도 회전)
+    const fitsFlat = (maxAlbumW <= effW && maxAlbumH <= effH)
+                  || (maxAlbumH <= effW && maxAlbumW <= effH);
+
+    if (!fitsFlat) continue; // 이 박스는 footprint 자체가 안 맞음
+
+    // 유효 높이에 총 스택 높이가 들어가는지 확인
+    if (totalStackH <= effD) {
+      // 한 박스에 전부 들어감
+      return { name: box.name, cnt: 1, detail: `유효공간 ${effW}×${effH}×${effD}cm` };
+    }
+
+    // 한 박스에 안 들어가면 몇 박스로 나눠야 하는지 계산
+    // effD에 들어가는 최대 앨범 두께 = effD
+    // 앨범을 두께 기준으로 쌓을 때 한 박스에 들어가는 수량 비율
+    const cntPerBox = Math.floor(effD / (totalStackH / totalQty));
+    if (cntPerBox <= 0) continue; // 앨범 한 장도 못 들어가는 박스 → 다음으로
+
+    const boxCount = Math.ceil(totalQty / cntPerBox);
+    return { name: box.name, cnt: boxCount, detail: `박스당 최대 ${cntPerBox}장` };
+  }
+
+  // 가장 큰 박스도 footprint이 안 맞으면: 가장 큰 박스로 부피 기반 fallback
+  const biggest = sorted[sorted.length - 1];
+  const effD = biggest.d - BOX_MARGIN;
+  const cntPerBox = Math.max(1, Math.floor(effD / (totalStackH / totalQty)));
+  const boxCount = Math.ceil(totalQty / cntPerBox);
+  return { name: biggest.name + '(최대)', cnt: boxCount, detail: '주의: 앨범 크기 초과' };
+}
+
+/* ═══════════════════════════════════════════
+   GENERATE RESULT
+═══════════════════════════════════════════ */
+function generateResult(){
+  const groups=groupOrders(D.orders);
+  if(!groups.length){alert('주문 데이터가 없습니다');return}
+  let totInv=0,wonCnt=0,signCnt=0;
+  const rows=[];
+
+  groups.forEach((g,idx)=>{
+    const rep=g.orders[0];
+    const w=D.winnerMap[g.mergeKey]||{won:'N',attend:'미정'};
+    const albumMap={},evSet=new Set();
+    let totalQty=0,email='';
+
+    g.orders.forEach(o=>{
+      albumMap[o.album]=(albumMap[o.album]||0)+(+o.qty);
+      evSet.add(o.event);
+      totalQty+=+o.qty;
+      if(!email&&o.email) email=o.email;
+    });
+
+    let onsiteQty=0;
+    if(w.won==='Y'){
+      wonCnt++;
+      if(w.attend==='Y'){
+        [...evSet].forEach(ev=>{const rule=D.onsite.find(r=>r.event===ev);if(rule)onsiteQty+=rule.qty});
+      }
+    }
+    const delivQty=Math.max(0,totalQty-onsiteQty);
+    const notes=[];
+    if(w.won==='Y'&&w.attend==='N'){notes.push('미참석 · 대리사인 필요');signCnt++}
+    if(w.won==='Y'&&w.attend==='미정') notes.push('참석여부 미정');
+
+    // Determine address type for display
+    const repAddrType=rep.addrType||'domestic';
+    const repAddrParsed=rep.addrParsed||null;
+    if(repAddrParsed&&repAddrParsed.status==='err') notes.push('⚠ 해외주소 오류 확인 필요');
+
+    const gifts=[...evSet].map(ev=>{const e=D.events.find(x=>x.type===ev);return e&&e.gift?`${ev}: ${e.gift}`:''}).filter(Boolean).join(' / ')||'특전없음';
+
+    const delAlbums=Object.entries(albumMap).map(([album,qty])=>{
+      const ratio=totalQty>0?qty/totalQty:0;
+      return{album,qty:Math.max(0,Math.round(delivQty*ratio))};
+    }).filter(x=>x.qty>0);
+
+    const box=delivQty>0?bestBox(delAlbums):{name:'-',cnt:0};
+    totInv+=box.cnt;
+
+    // Build address label for result
+    let addrLabel='국내';
+    if(repAddrType==='fixed') addrLabel='해외(수정)';
+    else if(repAddrType==='warn') addrLabel='해외(주의)';
+    else if(repAddrType==='error') addrLabel='해외(오류)';
+    else if(repAddrType==='international') addrLabel='해외';
+
+    rows.push({
+      no:idx+1,receiver:rep.receiver,applicant:rep.applicant,
+      phone:rep.phone,email,addr:rep.addr,
+      addrLabel,addrType:repAddrType,
+      addrParsed:repAddrParsed,
+      albumStr:Object.entries(albumMap).map(([k,v])=>`${k} ×${v}`).join(', '),
+      totalQty,onsiteQty,delivQty,
+      events:[...evSet].join(', '),gifts,
+      won:w.won==='Y'?'당첨':'미당첨',
+      attend:w.won!=='Y'?'-':w.attend==='Y'?'참석':w.attend==='N'?'미참석':'미정',
+      boxName:box.name,invoices:box.cnt,boxDetail:box.detail||'',
+      notes:notes.join(' / '),mergeCount:g.orders.length
+    });
+  });
+
+  document.getElementById('sum-row').innerHTML=`
+    <div class="scard"><div class="snum">${rows.length}</div><div class="slbl">총 배송지</div></div>
+    <div class="scard"><div class="snum">${wonCnt}</div><div class="slbl">당첨자</div></div>
+    <div class="scard"><div class="snum">${totInv}</div><div class="slbl">총 송장 수</div></div>
+    <div class="scard"><div class="snum">${signCnt}</div><div class="slbl">대리사인 필요</div></div>
+  `;
+
+  const addrBadge=(row)=>{
+    if(row.addrType==='fixed') return '<span class="addr-fixed">해외수정</span>';
+    if(row.addrType==='warn') return '<span class="bk b-amber">해외주의</span>';
+    if(row.addrType==='error') return '<span class="addr-err">해외오류</span>';
+    if(row.addrType==='international') return '<span class="addr-intl">해외</span>';
+    return '<span class="bk b-gray">국내</span>';
+  };
+
+  document.getElementById('result-tbody').innerHTML=rows.map(r=>`<tr>
+    <td style="font-family:var(--mono);text-align:center;color:var(--text3)">${r.no}</td>
+    <td style="font-weight:500;white-space:nowrap">${r.receiver}${r.mergeCount>1?`<span class="merge-badge">합배${r.mergeCount}</span>`:''}</td>
+    <td style="white-space:nowrap">${r.applicant}</td>
+    <td style="font-family:var(--mono);font-size:11px;white-space:nowrap">${r.phone}</td>
+    <td style="font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.email}</td>
+    <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.addr)}">${r.addr}</td>
+    <td>${addrBadge(r)}</td>
+    <td style="white-space:nowrap;font-size:12px">${r.albumStr}</td>
+    <td style="text-align:center;font-family:var(--mono)">${r.totalQty}</td>
+    <td style="text-align:center;font-family:var(--mono)">${r.onsiteQty||'-'}</td>
+    <td style="text-align:center;font-family:var(--mono);font-weight:700;color:var(--accent)">${r.delivQty}</td>
+    <td><span class="bk b-teal">${r.events}</span></td>
+    <td style="font-size:11px;max-width:130px">${r.gifts}</td>
+    <td><span class="bk ${r.won==='당첨'?'b-accent':'b-gray'}">${r.won}</span></td>
+    <td style="font-size:12px">${r.attend}</td>
+    <td><span class="bk b-blue" title="${r.boxDetail}">${r.boxName}</span>${r.boxDetail.includes('주의')?'<span class="bk b-amber" style="margin-left:3px">크기초과</span>':''}</td>
+    <td style="text-align:center;font-family:var(--mono);font-weight:500">${r.invoices||'-'}</td>
+    <td style="font-size:11px;color:var(--red);white-space:nowrap">${r.notes}</td>
+  </tr>`).join('')||'<tr><td colspan="18" class="empty">없음</td></tr>';
+
+  window._rows=rows;
+}
+
+/* ═══════════════════════════════════════════
+   EXPORT
+═══════════════════════════════════════════ */
+function exportExcel(){
+  const rows=window._rows;
+  if(!rows||!rows.length){alert('먼저 배송 명단을 생성해주세요');return}
+
+  const wb=XLSX.utils.book_new();
+
+  // Sheet 1: 배송명단 (전체)
+  const hdr=['No','수령자명','응모자명','연락처','이메일','주소','주소구분','앨범구성(합배)','총수량','현장수령','배송수량','응모행사','특전','당첨','참석','박스','박스상세','송장수','비고','합배건수'];
+  const data=rows.map(r=>[r.no,r.receiver,r.applicant,r.phone,r.email,r.addr,r.addrLabel,r.albumStr,r.totalQty,r.onsiteQty||0,r.delivQty,r.events,r.gifts,r.won,r.attend,r.boxName,r.boxDetail||'',r.invoices||0,r.notes,r.mergeCount]);
+  const ws=XLSX.utils.aoa_to_sheet([hdr,...data]);
+  ws['!cols']=[4,12,12,14,20,32,8,22,6,6,8,16,24,6,8,10,18,6,22,6].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'배송명단');
+
+  // Sheet 2: 해외배송 (DHL/FedEx 포맷)
+  const intlRows=rows.filter(r=>r.addrType!=='domestic'&&r.addrParsed);
+  if(intlRows.length){
+    const iHdr=['No','수령자명','연락처','이메일','Street Line 1','Street Line 2','City','State/Province','Postal Code','Country Code','DHL준비','FedEx준비','원본주소'];
+    const iData=intlRows.map(r=>{
+      const p=r.addrParsed;
+      return[r.no,r.receiver,r.phone,r.email,p.sl1||'',p.sl2||'',p.city||'',p.state||'',p.postal||'',p.cc||'',p.dhlReady?'Y':'N',p.fedexReady?'Y':'N',D.orders.find(o=>o.receiver===r.receiver)?.addr||''];
+    });
+    const wsI=XLSX.utils.aoa_to_sheet([iHdr,...iData]);
+    wsI['!cols']=[4,12,13,18,26,16,14,12,10,8,6,6,30].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb,wsI,'해외배송(DHL_FedEx)');
+  }
+
+  if(D.albums.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['앨범명','가로','세로','높이','무게'],...D.albums.map(a=>[a.name,a.w,a.h,a.d,a.g])]),'앨범정보');
+  if(D.boxes.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['박스명','가로','세로','높이'],...D.boxes.map(b=>[b.name,b.w,b.h,b.d])]),'박스정보');
+  if(D.events.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['행사명','키워드','특전'],...D.events.map(e=>[e.type,e.kw,e.gift])]),'행사정보');
+
+  const d=new Date(),ds=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb,`배송명단_${ds}.xlsx`);
+}
+
+/* ═══════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════ */
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function escKey(s){return String(s||'').replace(/'/g,"\\'")}
+
+// Init
+renderAlbums();renderBoxes();renderEvents();renderOnsite();
+loadSavedKey();
+</script>
+</body>
+</html>
