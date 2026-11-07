@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영상통화 당첨자 일괄등록</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a; --bg2: #111; --bg3: #1a1a1a; --bg4: #222;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.15);
+    --text: #f0f0f0; --text2: #999; --text3: #666;
+    --accent: #e8ff47; --danger: #ff5c5c; --success: #47ff8a; --warn: #ffb547;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 16px 80px; }
+  header { max-width: 1100px; margin: 0 auto 24px; padding: 32px 16px 16px; border-bottom: 0.5px solid var(--border2); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+  .logo-title { font-family: 'Bebas Neue', sans-serif; font-size: 40px; letter-spacing: 2px; color: var(--accent); line-height: 1; }
+  .logo-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+  .hstats { display: flex; gap: 20px; }
+  .hstat { text-align: right; }
+  .hstat-val { font-size: 26px; font-weight: 700; line-height: 1; }
+  .hstat-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--bg2); border-radius: var(--radius); padding: 4px; border: 0.5px solid var(--border); width: fit-content; max-width: 100%; overflow-x: auto; }
+  .tab { padding: 9px 20px; border-radius: 9px; font-size: 14px; cursor: pointer; color: var(--text2); border: none; background: transparent; font-family: inherit; white-space: nowrap; }
+  .tab.active { background: var(--accent); color: #000; font-weight: 700; }
+  .panel { display: none; } .panel.active { display: block; }
+
+  .card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .card .desc { font-size: 12px; color: var(--text2); margin-bottom: 14px; line-height: 1.6; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--text2); }
+  input[type=text], input[type=number], textarea, select {
+    background: var(--bg3); border: 0.5px solid var(--border2); color: var(--text); border-radius: var(--radius-sm);
+    padding: 9px 12px; font-size: 14px; font-family: inherit; outline: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  input[type=number] { width: 90px; }
+  textarea { width: 100%; min-height: 180px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 13px; line-height: 1.5; }
+  .btn { padding: 9px 16px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; border: 0.5px solid var(--border2); background: var(--bg3); color: var(--text); font-family: inherit; white-space: nowrap; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.accent { background: var(--accent); color: #000; font-weight: 700; border-color: var(--accent); }
+  .btn.danger { color: var(--danger); border-color: rgba(255,92,92,0.4); }
+  .btn.small { padding: 5px 10px; font-size: 12px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .artist-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 12px; }
+  .upload-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 22px; text-align: center; cursor: pointer; margin-bottom: 12px; }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: rgba(232,255,71,0.04); }
+  .upload-title { font-size: 14px; font-weight: 500; }
+  .upload-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  .msg { font-size: 13px; margin-top: 10px; line-height: 1.7; }
+  .msg .ok { color: var(--success); } .msg .warn { color: var(--warn); } .msg .err { color: var(--danger); }
+
+  /* 분배 현황 */
+  .artist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .artist-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .artist-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .artist-name { font-size: 16px; font-weight: 700; }
+  .artist-count { font-size: 12px; color: var(--text2); }
+  .phone-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg3); border-radius: var(--radius-sm); margin-bottom: 6px; cursor: pointer; border: 0.5px solid transparent; }
+  .phone-row:hover { border-color: var(--accent); }
+  .phone-label { font-weight: 700; font-size: 14px; min-width: 52px; }
+  .phone-bar { flex: 1; height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
+  .phone-bar > div { height: 100%; background: var(--success); }
+  .phone-stat { font-size: 12px; color: var(--text2); min-width: 92px; text-align: right; }
+  .phone-row.complete .phone-label { color: var(--success); }
+  .empty { color: var(--text3); font-size: 13px; padding: 30px; text-align: center; }
+
+  /* 등록 모드 */
+  .reg-top { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .reg-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+  @media (max-width: 800px) { .reg-layout { grid-template-columns: 1fr; } header { padding-top: 20px; } .logo-title { font-size: 32px; } }
+  .big-card { background: var(--bg2); border: 1px solid var(--accent); border-radius: var(--radius); padding: 28px 20px; text-align: center; }
+  .big-pos { font-size: 13px; color: var(--text2); margin-bottom: 10px; }
+  .big-id { font-size: 46px; font-weight: 700; letter-spacing: 1px; word-break: break-all; font-family: ui-monospace, Consolas, monospace; color: var(--accent); cursor: pointer; user-select: all; }
+  .big-next { font-size: 14px; color: var(--text3); margin-top: 10px; font-family: ui-monospace, Consolas, monospace; }
+  .big-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+  .big-actions .btn { padding: 14px 22px; font-size: 15px; }
+  .hint { font-size: 12px; color: var(--text3); margin-top: 14px; line-height: 1.7; }
+  kbd { background: var(--bg4); border: 0.5px solid var(--border2); border-radius: 4px; padding: 1px 6px; font-size: 11px; font-family: inherit; }
+  .id-list { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); max-height: 520px; overflow-y: auto; }
+  .id-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 0.5px solid var(--border); font-size: 14px; cursor: pointer; }
+  .id-item:last-child { border-bottom: none; }
+  .id-item .n { color: var(--text3); font-size: 12px; min-width: 22px; }
+  .id-item .v { flex: 1; font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+  .id-item .ck { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+  .id-item.done .v { color: var(--text3); text-decoration: line-through; }
+  .id-item.done .ck { background: var(--success); color: #000; border-color: var(--success); }
+  .id-item.current { background: rgba(232,255,71,0.08); }
+  .id-item.current .v { color: var(--accent); font-weight: 700; }
+  .flag { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: rgba(255,181,71,0.15); color: var(--warn); }
+
+  .adb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .adb-grid .field input[type=number] { width: 100%; }
+  .xy { display: flex; gap: 6px; } .xy input { width: 50% !important; }
+  .steps { font-size: 13px; color: var(--text2); line-height: 1.9; padding-left: 18px; }
+  .steps code, .desc code { background: var(--bg4); padding: 1px 6px; border-radius: 4px; color: var(--accent); font-size: 12px; }
+  label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text); cursor: pointer; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--accent); color: #000; padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: 700; opacity: 0; transition: all .2s; pointer-events: none; z-index: 99; max-width: calc(100% - 32px); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo-title">VIDEO CALL WINNERS</div>
+    <div class="logo-sub">영상통화 당첨자 아이디 일괄 분배 · 빠른 등록 · 자동입력</div>
+  </div>
+  <div class="hstats">
+    <div class="hstat"><div class="hstat-val" id="h-total">0</div><div class="hstat-label">전체 당첨자</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-phones">0</div><div class="hstat-label">핸드폰</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-done" style="color:var(--success)">0</div><div class="hstat-label">등록 완료</div></div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-tab="load">① 당첨자 불러오기</button>
+    <button class="tab" data-tab="board">② 폰별 분배 현황</button>
+    <button class="tab" data-tab="reg">③ 등록하기</button>
+    <button class="tab" data-tab="adb">④ 자동입력 설정 (ADB)</button>
+  </div>
+
+  <!-- ① 불러오기 -->
+  <div class="panel active" id="tab-load">
+    <div class="card">
+      <h2>기본 설정</h2>
+      <div class="desc">아티스트 수, 아티스트당 핸드폰 수, 폰 1대당 등록 인원을 정하세요. 인원이 넘치면 폰이 자동으로 추가됩니다.</div>
+      <div class="row">
+        <div class="field"><label>아티스트 수</label><input type="number" id="cfg-artists" min="1" max="50" value="5"></div>
+        <div class="field"><label>아티스트당 폰</label><input type="number" id="cfg-phones" min="1" max="20" value="2"></div>
+        <div class="field"><label>폰당 인원</label><input type="number" id="cfg-per" min="1" max="500" value="30"></div>
+      </div>
+      <div class="artist-inputs" id="artist-inputs"></div>
+    </div>
+
+    <div class="card">
+      <h2>당첨자 아이디 넣기</h2>
+      <div class="desc">
+        <b>방법 A — 엑셀 업로드:</b> <code>아티스트</code>(또는 멤버) 열과 <code>아이디</code>(또는 ID) 열이 있으면 자동 인식합니다. <code>폰</code> 열이 있으면 그 번호대로, 없으면 순서대로 30명씩 나눕니다. 시트가 여러 개면 시트 이름을 아티스트로 씁니다.<br>
+        <b>방법 B — 붙여넣기:</b> 엑셀에서 두 열(아티스트 / 아이디)을 복사해서 그대로 붙여넣거나, 아이디만 붙여넣고 아래에서 아티스트를 고르세요. 한 줄에 하나씩, 또는 쉼표·공백으로 구분해도 됩니다.
+      </div>
+      <div class="upload-zone" id="upload-zone">
+        <div class="upload-title">📂 엑셀 파일 끌어다 놓기 / 클릭해서 선택</div>
+        <div class="upload-sub">.xlsx · .xls · .csv (추첨 프로그램에서 받은 당첨자 엑셀도 가능)</div>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none">
+      <textarea id="paste-box" placeholder="예시 1) 아이디만&#10;user_abc&#10;fan1234&#10;&#10;예시 2) 엑셀 두 열 복사&#10;아티스트A	user_abc&#10;아티스트A	fan1234&#10;아티스트B	star_99"></textarea>
+      <div class="row" style="margin-top:12px;">
+        <div class="field"><label>아이디만 붙여넣었다면 → 아티스트</label><select id="paste-artist"></select></div>
+        <div class="field"><label>기존 데이터</label>
+          <select id="paste-mode"><option value="replace">해당 아티스트 교체</option><option value="append">뒤에 추가</option></select>
+        </div>
+        <button class="btn accent" id="btn-paste">⚡ 분배하기</button>
+        <button class="btn danger" id="btn-reset">전체 초기화</button>
+      </div>
+      <div class="msg" id="load-msg"></div>
+    </div>
+  </div>
+
+  <!-- ② 현황 -->
+  <div class="panel" id="tab-board">
+    <div class="row" style="margin-bottom:14px;">
+      <button class="btn accent" id="btn-xlsx-all">📥 폰별 분배표 엑셀</button>
+      <button class="btn" id="btn-bat-all">🤖 전체 폰 자동입력 파일(.bat) 받기</button>
+      <button class="btn" id="btn-reset-done">완료 체크 모두 해제</button>
+    </div>
+    <div class="artist-grid" id="artist-grid"></div>
+  </div>
+
+  <!-- ③ 등록 -->
+  <div class="panel" id="tab-reg">
+    <div class="reg-top">
+      <select id="reg-phone" style="min-width:220px;"></select>
+      <button class="btn" id="btn-prev-phone">◀ 이전 폰</button>
+      <button class="btn" id="btn-next-phone">다음 폰 ▶</button>
+      <button class="btn" id="btn-copy-all">📋 이 폰 전체 복사</button>
+      <button class="btn" id="btn-bat-one">🤖 이 폰 자동입력(.bat)</button>
+    </div>
+    <div class="reg-layout">
+      <div>
+        <div class="big-card">
+          <div class="big-pos" id="big-pos">-</div>
+          <div class="big-id" id="big-id" title="클릭하면 복사">-</div>
+          <div class="big-next" id="big-next"></div>
+          <div class="big-actions">
+            <button class="btn" id="btn-back">◀ 이전</button>
+            <button class="btn accent" id="btn-copy-next">📋 복사하고 다음 (Space)</button>
+            <button class="btn" id="btn-skip">건너뛰기 ▶</button>
+          </div>
+          <div class="hint">
+            <kbd>Space</kbd>/<kbd>Enter</kbd> 복사 후 완료 처리 &amp; 다음 · <kbd>←</kbd> 이전 · <kbd>→</kbd> 건너뛰기 · <kbd>[</kbd> <kbd>]</kbd> 폰 이동<br>
+            📱 폰에서 직접 넣는다면: 이 파일을 폰으로 보내 폰 브라우저로 열고, 같은 아이디를 붙여넣은 뒤 이 화면에서 <b>탭 → 앱에서 붙여넣기</b>를 반복하세요.<br>
+            🤖 가장 빠른 방법은 <b>④ 자동입력(ADB)</b> — PC에 폰을 USB로 연결하면 30명을 자동으로 입력합니다.
+          </div>
+        </div>
+      </div>
+      <div class="id-list" id="id-list"></div>
+    </div>
+  </div>
+
+  <!-- ④ ADB -->
+  <div class="panel" id="tab-adb">
+    <div class="card">
+      <h2>ADB 자동입력이란?</h2>
+      <div class="desc">PC에 USB로 연결한 안드로이드 폰에 <b>아이디 입력 → 등록 버튼 누르기</b>를 자동으로 반복시키는 방식입니다. 폰 1대당 30명이 수십 초 안에 끝납니다. (아이폰은 지원되지 않습니다)</div>
+      <ol class="steps">
+        <li><b>처음 한 번만:</b> PC에 <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" style="color:var(--accent)">Android Platform-Tools</a>를 받아 압축을 풀고, 받은 <code>.bat</code> 파일을 그 폴더(adb.exe가 있는 곳)에 넣으세요.</li>
+        <li>폰: <code>설정 → 휴대전화 정보 → 소프트웨어 정보 → 빌드번호</code> 7번 탭 → 개발자 옵션 켜기 → <code>USB 디버깅</code> 켜기.</li>
+        <li>개발자 옵션의 <code>포인터 위치</code>를 켜면 화면 위쪽에 터치 좌표(X, Y)가 보입니다. 영상통화 앱의 <b>아이디 입력칸</b>과 <b>추가/등록 버튼</b>을 눌러 좌표를 아래에 적으세요. (폰 기종이 같으면 한 번만 적으면 됩니다)</li>
+        <li>폰을 USB로 연결하고 "USB 디버깅 허용"을 누른 뒤, 앱에서 당첨자 등록 화면을 띄워 놓고 <code>.bat</code> 파일을 더블클릭하세요.</li>
+        <li>폰을 여러 대 동시에 연결했다면 <code>adb devices</code>로 나온 시리얼 번호를 각 폰에 적어 주세요. 한 대씩 꽂아서 하면 비워 둬도 됩니다.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>입력 동작 설정</h2>
+      <div class="desc">아이디 한 명마다: ① 입력칸 탭 → ② (선택) 기존 글자 지우기 → ③ 아이디 입력 → ④ 등록 버튼 탭 또는 엔터 → ⑤ 대기</div>
+      <div class="adb-grid">
+        <div class="field"><label>① 아이디 입력칸 좌표 (X, Y)</label><div class="xy"><input type="number" id="adb-in-x" placeholder="X"><input type="number" id="adb-in-y" placeholder="Y"></div></div>
+        <div class="field"><label>④ 등록 방식</label><select id="adb-submit"><option value="tap">등록 버튼 탭</option><option value="enter">키보드 엔터</option><option value="both">엔터 후 버튼 탭</option></select></div>
+        <div class="field"><label>④ 등록 버튼 좌표 (X, Y)</label><div class="xy"><input type="number" id="adb-btn-x" placeholder="X"><input type="number" id="adb-btn-y" placeholder="Y"></div></div>
+        <div class="field"><label>⑤ 한 명당 대기 (초)</label><input type="number" id="adb-delay" step="0.1" min="0" value="0.8"></div>
+        <div class="field"><label>입력 전 대기 (초)</label><input type="number" id="adb-pre" step="0.1" min="0" value="0.3"></div>
+        <div class="field"><label>&nbsp;</label><label class="chk"><input type="checkbox" id="adb-clear" checked> ② 입력 전 칸 비우기</label></div>
+        <div class="field"><label>&nbsp;</label><label class="chk"><input type="checkbox" id="adb-pause" checked> 시작 전 확인(아무 키나 누르기)</label></div>
+        <div class="field"><label>&nbsp;</label><label class="chk"><input type="checkbox" id="adb-hidekb"> 등록 후 키보드 닫기(뒤로)</label></div>
+      </div>
+      <div class="row" style="margin-top:14px;">
+        <button class="btn" id="btn-adb-test">🧪 테스트용 .bat (아이디 1개만)</button>
+      </div>
+      <div class="msg" id="adb-msg"></div>
+    </div>
+    <div class="card">
+      <h2>폰별 시리얼 번호 (선택)</h2>
+      <div class="desc">여러 대를 한 PC에 동시에 꽂을 때만 필요합니다. 명령 프롬프트에서 <code>adb devices</code> 를 치면 나오는 값을 붙여넣으세요.</div>
+      <div class="adb-grid" id="serial-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY = 'vc-winner-register-v1';
+let state = {
+  cfg: { artists: 5, phones: 2, per: 30 },
+  artistNames: ['아티스트1','아티스트2','아티스트3','아티스트4','아티스트5'],
+  data: {},           // artistName -> [{label, ids:[], done:[bool]}]
+  serials: {},        // "artist|phoneIdx" -> serial
+  cur: { key: null, idx: 0 },
+  adb: { inX:'', inY:'', btnX:'', btnY:'', submit:'tap', delay:0.8, pre:0.3, clear:true, pause:true, hidekb:false }
+};
+
+/* ---------- 저장 ---------- */
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if (s && s.cfg) state = Object.assign(state, s, { adb: Object.assign(state.adb, s.adb || {}) });
+  } catch (e) {}
+}
+
+const $ = id => document.getElementById(id);
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 1600); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- 탭 ---------- */
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  if (name === 'board') renderBoard();
+  if (name === 'reg') renderReg();
+  if (name === 'adb') renderSerials();
+}
+
+/* ---------- 설정 ---------- */
+function renderArtistInputs() {
+  const n = state.cfg.artists;
+  while (state.artistNames.length < n) state.artistNames.push('아티스트' + (state.artistNames.length + 1));
+  state.artistNames.length = n;
+  $('artist-inputs').innerHTML = state.artistNames.map((nm, i) =>
+    `<input type="text" data-ai="${i}" value="${esc(nm)}" placeholder="아티스트 ${i + 1} 이름">`).join('');
+  $('artist-inputs').querySelectorAll('input').forEach(inp => inp.onchange = () => {
+    const i = +inp.dataset.ai, oldName = state.artistNames[i], newName = inp.value.trim() || oldName;
+    if (newName !== oldName && state.data[oldName]) {
+      if (state.data[newName]) { toast('이미 있는 이름입니다'); inp.value = oldName; return; }
+      state.data[newName] = state.data[oldName]; delete state.data[oldName];
+      Object.keys(state.serials).forEach(k => { if (k.startsWith(oldName + '|')) { state.serials[newName + k.slice(oldName.length)] = state.serials[k]; delete state.serials[k]; } });
+      if (state.cur.key && state.cur.key.startsWith(oldName + '|')) state.cur.key = newName + state.cur.key.slice(oldName.length);
+    }
+    state.artistNames[i] = newName; inp.value = newName;
+    save(); renderPasteArtist(); updateHeader();
+  });
+  renderPasteArtist();
+}
+function renderPasteArtist() {
+  $('paste-artist').innerHTML = state.artistNames.map(n => `<option>${esc(n)}</option>`).join('');
+}
+['cfg-artists','cfg-phones','cfg-per'].forEach(id => $(id).onchange = () => {
+  state.cfg.artists = Math.max(1, +$('cfg-artists').value || 1);
+  state.cfg.phones = Math.max(1, +$('cfg-phones').value || 1);
+  state.cfg.per = Math.max(1, +$('cfg-per').value || 30);
+  renderArtistInputs(); save();
+});
+
+/* ---------- 아이디 정리 ---------- */
+function cleanId(v) {
+  return String(v == null ? '' : v).replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/^@/, '').trim();
+}
+function splitIds(text) {
+  return text.split(/[\r\n,;]+|\s+/).map(cleanId).filter(Boolean);
+}
+
+/* 아티스트별 아이디 목록 → 폰별로 나누기. phoneHints: 같은 길이의 폰번호 배열(없으면 null) */
+function distribute(artist, ids, phoneHints, mode) {
+  const per = state.cfg.per;
+  let existing = [];
+  if (mode === 'append' && state.data[artist]) {
+    state.data[artist].forEach(p => p.ids.forEach((id, i) => existing.push({ id, done: p.done[i], phone: null })));
+  }
+  const items = existing.concat(ids.map((id, i) => ({ id, done: false, phone: phoneHints ? phoneHints[i] : null })));
+  let phones = [];
+  if (items.some(x => x.phone)) {
+    // 엑셀에 폰 번호가 있으면 그대로
+    const map = new Map();
+    items.forEach(x => { const k = x.phone || '1'; if (!map.has(k)) map.set(k, []); map.get(k).push(x); });
+    [...map.keys()].sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0) || String(a).localeCompare(String(b))).forEach(k => {
+      const arr = map.get(k); phones.push({ label: /^\d+$/.test(k) ? `폰${k}` : String(k), ids: arr.map(x => x.id), done: arr.map(x => x.done) });
+    });
+  } else {
+    const nPhones = Math.max(state.cfg.phones, Math.ceil(items.length / per));
+    for (let p = 0; p < nPhones; p++) {
+      const arr = items.slice(p * per, (p + 1) * per);
+      phones.push({ label: `폰${p + 1}`, ids: arr.map(x => x.id), done: arr.map(x => x.done) });
+    }
+  }
+  state.data[artist] = phones;
+  if (!state.artistNames.includes(artist)) {
+    state.artistNames.push(artist); state.cfg.artists = state.artistNames.length; $('cfg-artists').value = state.cfg.artists;
+  }
+}
+
+function reportLoad(groups) {
+  const lines = [];
+  let total = 0;
+  Object.entries(groups).forEach(([artist, g]) => {
+    total += g.ids.length;
+    const phones = state.data[artist];
+    const dupes = findDupes(g.ids);
+    const odd = g.ids.filter(id => /[^\x21-\x7E]/.test(id));
+    let l = `<span class="ok">✓ ${esc(artist)}</span> — ${g.ids.length}명 → ${phones.map(p => `${esc(p.label)} ${p.ids.length}명`).join(' / ')}`;
+    if (phones.some(p => p.ids.length > state.cfg.per)) l += ` <span class="warn">(폰당 ${state.cfg.per}명 초과 폰 있음)</span>`;
+    if (dupes.length) l += `<br>&nbsp;&nbsp;<span class="warn">⚠ 중복 아이디 ${dupes.length}개: ${dupes.slice(0, 10).map(esc).join(', ')}${dupes.length > 10 ? ' …' : ''}</span>`;
+    if (odd.length) l += `<br>&nbsp;&nbsp;<span class="warn">⚠ 한글·공백 등 특수문자 포함 ${odd.length}개 (자동입력 불가, 수동 확인): ${odd.slice(0, 5).map(esc).join(', ')}</span>`;
+    lines.push(l);
+  });
+  $('load-msg').innerHTML = lines.join('<br>') + `<br><b>총 ${total}명 분배 완료.</b> ② 폰별 분배 현황에서 확인하세요.`;
+  save(); updateHeader();
+  toast(`${total}명 분배 완료`);
+}
+function findDupes(ids) {
+  const seen = new Set(), d = new Set();
+  ids.forEach(x => { const k = x.toLowerCase(); if (seen.has(k)) d.add(x); seen.add(k); });
+  return [...d];
+}
+
+/* ---------- 붙여넣기 ---------- */
+$('btn-paste').onclick = () => {
+  const text = $('paste-box').value;
+  if (!text.trim()) { toast('아이디를 붙여넣어 주세요'); return; }
+  const mode = $('paste-mode').value;
+  const rows = text.split(/\r?\n/).filter(l => l.trim());
+  const isTab = rows.filter(r => r.includes('\t')).length >= rows.length * 0.6;
+  const groups = {};
+  if (isTab) {
+    // 엑셀 복사 → 표처럼 처리
+    const table = rows.map(r => r.split('\t'));
+    parseTable(table, groups, $('paste-artist').value);
+  } else {
+    groups[$('paste-artist').value] = { ids: splitIds(text), phones: null };
+  }
+  applyGroups(groups, mode);
+};
+
+function applyGroups(groups, mode) {
+  const keys = Object.keys(groups).filter(k => groups[k].ids.length);
+  if (!keys.length) { $('load-msg').innerHTML = '<span class="err">아이디를 찾지 못했습니다. 열 이름(아티스트 / 아이디)을 확인해 주세요.</span>'; return; }
+  keys.forEach(a => distribute(a, groups[a].ids, groups[a].phones, mode));
+  const out = {}; keys.forEach(k => out[k] = groups[k]);
+  if (!state.cur.key) { const a = keys[0]; state.cur = { key: a + '|0', idx: 0 }; }
+  reportLoad(out);
+}
+
+/* 2차원 배열 → {artist: {ids, phones}} */
+function parseTable(table, groups, defaultArtist) {
+  table = table.filter(r => r.some(c => String(c).trim() !== ''));
+  if (!table.length) return;
+  const head = table[0].map(c => String(c).replace(/\s/g, '').toLowerCase());
+  const find = (...keys) => head.findIndex(h => keys.some(k => h.includes(k)));
+  let ai = find('아티스트', '멤버', 'artist', 'member', '가수');
+  let ii = find('아이디', 'id', '계정', '닉네임', 'account', 'user');
+  let pi = find('핸드폰', '휴대폰', '폰', 'phone', '기기', '디바이스', 'device');
+  if (pi === ai || pi === ii) pi = -1;
+  let body = table;
+  if (ai >= 0 || ii >= 0) body = table.slice(1);
+  if (ii < 0) {
+    // 헤더가 없으면: 2열 이상 → 첫 열 아티스트, 둘째 열 아이디 / 1열 → 아이디
+    const cols = Math.max(...table.map(r => r.length));
+    if (ai >= 0) ii = ai === 0 ? 1 : 0;
+    else if (cols >= 2) { ai = 0; ii = 1; }
+    else ii = 0;
+  }
+  body.forEach(r => {
+    const id = cleanId(r[ii]);
+    if (!id) return;
+    const artist = ai >= 0 ? (String(r[ai] || '').trim() || defaultArtist) : defaultArtist;
+    if (!groups[artist]) groups[artist] = { ids: [], phones: pi >= 0 ? [] : null };
+    groups[artist].ids.push(id);
+    if (groups[artist].phones) groups[artist].phones.push(String(r[pi] || '').replace(/[^0-9A-Za-z가-힣]/g, '').replace(/^(폰|phone)/i, '') || null);
+  });
+}
+
+/* ---------- 엑셀 업로드 ---------- */
+const zone = $('upload-zone');
+zone.onclick = () => $('file-input').click();
+zone.ondragover = e => { e.preventDefault(); zone.classList.add('dragover'); };
+zone.ondragleave = () => zone.classList.remove('dragover');
+zone.ondrop = e => { e.preventDefault(); zone.classList.remove('dragover'); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); };
+$('file-input').onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); e.target.value = ''; };
+
+function readFile(file) {
+  if (typeof XLSX === 'undefined') { toast('엑셀 라이브러리를 불러오지 못했습니다 (인터넷 확인)'); return; }
+  const rd = new FileReader();
+  rd.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'array' });
+      const groups = {};
+      const sheets = wb.SheetNames.filter(n => !/전체\s*응모자|요약|summary/i.test(n));
+      sheets.forEach(sn => {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
+        // 시트가 여러 개면 시트 이름을 기본 아티스트로
+        const def = sheets.length > 1 ? sn : $('paste-artist').value;
+        parseTable(rows, groups, def);
+      });
+      applyGroups(groups, $('paste-mode').value);
+    } catch (err) {
+      $('load-msg').innerHTML = `<span class="err">파일을 읽지 못했습니다: ${esc(err.message)}</span>`;
+    }
+  };
+  rd.readAsArrayBuffer(file);
+}
+
+$('btn-reset').onclick = () => {
+  if (!confirm('모든 당첨자 데이터와 완료 체크를 지울까요?')) return;
+  state.data = {}; state.cur = { key: null, idx: 0 }; save(); updateHeader();
+  $('load-msg').innerHTML = ''; toast('초기화했습니다');
+};
+
+/* ---------- 공통 ---------- */
+function allPhones() {
+  const list = [];
+  state.artistNames.forEach(a => (state.data[a] || []).forEach((p, i) => list.push({ key: a + '|' + i, artist: a, idx: i, phone: p })));
+  Object.keys(state.data).forEach(a => { if (!state.artistNames.includes(a)) state.data[a].forEach((p, i) => list.push({ key: a + '|' + i, artist: a, idx: i, phone: p })); });
+  return list;
+}
+function getPhone(key) {
+  if (!key) return null;
+  const k = key.lastIndexOf('|'); const a = key.slice(0, k), i = +key.slice(k + 1);
+  return state.data[a] && state.data[a][i] ? { artist: a, idx: i, phone: state.data[a][i] } : null;
+}
+function updateHeader() {
+  const ps = allPhones();
+  $('h-total').textContent = ps.reduce((s, p) => s + p.phone.ids.length, 0);
+  $('h-phones').textContent = ps.filter(p => p.phone.ids.length).length;
+  $('h-done').textContent = ps.reduce((s, p) => s + p.phone.done.filter(Boolean).length, 0);
+}
+
+/* ---------- ② 현황 ---------- */
+function renderBoard() {
+  const g = $('artist-grid');
+  const artists = [...new Set(allPhones().map(p => p.artist))];
+  if (!artists.length) { g.innerHTML = '<div class="empty">① 에서 당첨자를 먼저 불러와 주세요.</div>'; return; }
+  g.innerHTML = artists.map(a => {
+    const phones = state.data[a];
+    const tot = phones.reduce((s, p) => s + p.ids.length, 0);
+    const done = phones.reduce((s, p) => s + p.done.filter(Boolean).length, 0);
+    return `<div class="artist-card">
+      <div class="artist-head"><div class="artist-name">${esc(a)}</div><div class="artist-count">${done} / ${tot}명 완료</div></div>
+      ${phones.map((p, i) => {
+        const d = p.done.filter(Boolean).length, n = p.ids.length;
+        return `<div class="phone-row ${n && d === n ? 'complete' : ''}" data-key="${esc(a + '|' + i)}">
+          <div class="phone-label">${esc(p.label)}</div>
+          <div class="phone-bar"><div style="width:${n ? d / n * 100 : 0}%"></div></div>
+          <div class="phone-stat">${d}/${n}${n && d === n ? ' ✓' : ''}</div>
+          <button class="btn small" data-copy="${esc(a + '|' + i)}">복사</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+  g.querySelectorAll('.phone-row').forEach(r => r.onclick = e => {
+    if (e.target.dataset.copy) { const ph = getPhone(e.target.dataset.copy); copyText(ph.phone.ids.join('\n'), `${ph.artist} ${ph.phone.label} ${ph.phone.ids.length}명 복사`); return; }
+    openPhone(r.dataset.key);
+  });
+}
+function openPhone(key) {
+  const ph = getPhone(key); if (!ph) return;
+  const first = ph.phone.done.findIndex(x => !x);
+  state.cur = { key, idx: first < 0 ? 0 : first }; save(); switchTab('reg');
+}
+$('btn-reset-done').onclick = () => {
+  if (!confirm('모든 폰의 완료 체크를 해제할까요?')) return;
+  allPhones().forEach(p => p.phone.done = p.phone.ids.map(() => false)); save(); renderBoard(); updateHeader();
+};
+
+/* ---------- ③ 등록 ---------- */
+function renderReg() {
+  const ps = allPhones();
+  const sel = $('reg-phone');
+  if (!ps.length) {
+    sel.innerHTML = '<option>당첨자 없음</option>';
+    $('big-id').textContent = '-'; $('big-pos').textContent = '① 에서 당첨자를 먼저 불러와 주세요'; $('big-next').textContent = ''; $('id-list').innerHTML = '';
+    return;
+  }
+  if (!getPhone(state.cur.key)) state.cur = { key: ps[0].key, idx: 0 };
+  sel.innerHTML = ps.map(p => {
+    const d = p.phone.done.filter(Boolean).length, n = p.phone.ids.length;
+    return `<option value="${esc(p.key)}" ${p.key === state.cur.key ? 'selected' : ''}>${esc(p.artist)} · ${esc(p.phone.label)} (${d}/${n})${n && d === n ? ' ✓' : ''}</option>`;
+  }).join('');
+  const { artist, phone } = getPhone(state.cur.key);
+  const ids = phone.ids;
+  if (state.cur.idx >= ids.length) state.cur.idx = Math.max(0, ids.length - 1);
+  const i = state.cur.idx;
+  const doneN = phone.done.filter(Boolean).length;
+  if (!ids.length) { $('big-id').textContent = '-'; $('big-pos').textContent = '이 폰에는 배정된 아이디가 없습니다'; $('big-next').textContent = ''; }
+  else if (doneN === ids.length) {
+    $('big-pos').textContent = `${artist} · ${phone.label} — ${ids.length}명 모두 완료 🎉`;
+    $('big-id').textContent = '완료!'; $('big-next').textContent = '] 키 또는 "다음 폰 ▶" 으로 넘어가세요';
+  } else {
+    $('big-pos').textContent = `${artist} · ${phone.label} — ${i + 1} / ${ids.length}번째 (완료 ${doneN})`;
+    $('big-id').textContent = ids[i];
+    $('big-next').textContent = ids[i + 1] ? `다음: ${ids[i + 1]}` : '마지막 아이디입니다';
+  }
+  const dup = new Set(findDupes(ids).map(x => x.toLowerCase()));
+  $('id-list').innerHTML = ids.map((id, k) => `<div class="id-item ${phone.done[k] ? 'done' : ''} ${k === i && doneN !== ids.length ? 'current' : ''}" data-k="${k}">
+      <span class="n">${k + 1}</span><span class="v">${esc(id)}</span>
+      ${dup.has(id.toLowerCase()) ? '<span class="flag">중복</span>' : ''}${/[^\x21-\x7E]/.test(id) ? '<span class="flag">특수문자</span>' : ''}
+      <span class="ck" data-ck="${k}">${phone.done[k] ? '✓' : ''}</span></div>`).join('');
+  $('id-list').querySelectorAll('.id-item').forEach(el => el.onclick = e => {
+    const k = +el.dataset.k;
+    if (e.target.dataset.ck !== undefined) { phone.done[k] = !phone.done[k]; }
+    else { state.cur.idx = k; }
+    save(); renderReg(); updateHeader();
+  });
+  const cur = $('id-list').querySelector('.current'); if (cur) cur.scrollIntoView({ block: 'nearest' });
+}
+$('reg-phone').onchange = e => openPhone(e.target.value);
+
+function copyText(t, msg) {
+  const done = () => toast(msg || '복사됨');
+  if (navigator.clipboard && window.isSecureContext !== false) {
+    navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done));
+  } else fallbackCopy(t, done);
+}
+function fallbackCopy(t, cb) {
+  const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); cb();
+}
+function copyAndNext() {
+  const ph = getPhone(state.cur.key); if (!ph || !ph.phone.ids.length) return;
+  const p = ph.phone, i = state.cur.idx;
+  if (p.done.every(Boolean)) { nextPhone(1); return; }
+  copyText(p.ids[i], `복사: ${p.ids[i]}`);
+  p.done[i] = true;
+  let n = p.done.findIndex((d, k) => !d && k > i); if (n < 0) n = p.done.findIndex(d => !d);
+  state.cur.idx = n < 0 ? i : n;
+  save(); renderReg(); updateHeader();
+}
+function move(d) {
+  const ph = getPhone(state.cur.key); if (!ph) return;
+  state.cur.idx = Math.min(Math.max(0, state.cur.idx + d), ph.phone.ids.length - 1); save(); renderReg();
+}
+function nextPhone(d) {
+  const ps = allPhones(); if (!ps.length) return;
+  const k = ps.findIndex(p => p.key === state.cur.key);
+  const n = ps[(k + d + ps.length) % ps.length]; openPhone(n.key);
+}
+$('btn-copy-next').onclick = copyAndNext;
+$('btn-back').onclick = () => move(-1);
+$('btn-skip').onclick = () => move(1);
+$('btn-next-phone').onclick = () => nextPhone(1);
+$('btn-prev-phone').onclick = () => nextPhone(-1);
+$('big-id').onclick = () => { const ph = getPhone(state.cur.key); if (ph && ph.phone.ids[state.cur.idx]) copyText(ph.phone.ids[state.cur.idx]); };
+$('btn-copy-all').onclick = () => { const ph = getPhone(state.cur.key); if (ph) copyText(ph.phone.ids.join('\n'), `${ph.phone.ids.length}명 전체 복사`); };
+$('btn-bat-one').onclick = () => { const ph = getPhone(state.cur.key); if (ph) downloadBat([ph]); };
+
+document.addEventListener('keydown', e => {
+  if (!$('tab-reg').classList.contains('active')) return;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); copyAndNext(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); move(1); }
+  else if (e.key === ']') nextPhone(1);
+  else if (e.key === '[') nextPhone(-1);
+});
+
+/* ---------- 엑셀 다운로드 ---------- */
+$('btn-xlsx-all').onclick = () => {
+  const ps = allPhones(); if (!ps.length) { toast('데이터가 없습니다'); return; }
+  const wb = XLSX.utils.book_new();
+  const artists = [...new Set(ps.map(p => p.artist))];
+  // 요약: 폰별 가로 배치 (폰1 | 폰2 ...)
+  artists.forEach(a => {
+    const phones = state.data[a];
+    const maxN = Math.max(...phones.map(p => p.ids.length), 0);
+    const aoa = [['번호', ...phones.map(p => p.label)]];
+    for (let r = 0; r < maxN; r++) aoa.push([r + 1, ...phones.map(p => p.ids[r] || '')]);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 6 }, ...phones.map(() => ({ wch: 22 }))];
+    XLSX.utils.book_append_sheet(wb, ws, a.replace(/[\\\/\?\*\[\]:]/g, '').slice(0, 31) || 'Sheet');
+  });
+  const all = [['아티스트', '폰', '번호', '아이디', '등록완료']];
+  ps.forEach(p => p.phone.ids.forEach((id, i) => all.push([p.artist, p.phone.label, i + 1, id, p.phone.done[i] ? 'O' : ''])));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(all), '전체목록');
+  const d = new Date(); const ds = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  XLSX.writeFile(wb, `영상통화_폰별분배표_${ds}.xlsx`);
+};
+
+/* ---------- ④ ADB ---------- */
+const adbFields = { inX: 'adb-in-x', inY: 'adb-in-y', btnX: 'adb-btn-x', btnY: 'adb-btn-y', submit: 'adb-submit', delay: 'adb-delay', pre: 'adb-pre', clear: 'adb-clear', pause: 'adb-pause', hidekb: 'adb-hidekb' };
+function renderAdb() {
+  Object.entries(adbFields).forEach(([k, id]) => { const el = $(id); if (el.type === 'checkbox') el.checked = !!state.adb[k]; else el.value = state.adb[k]; });
+}
+Object.entries(adbFields).forEach(([k, id]) => $(id).onchange = () => {
+  const el = $(id); state.adb[k] = el.type === 'checkbox' ? el.checked : el.value; save();
+});
+function renderSerials() {
+  const ps = allPhones();
+  const g = $('serial-grid');
+  if (!ps.length) { g.innerHTML = '<div class="empty" style="padding:10px;text-align:left">당첨자를 불러오면 폰 목록이 나타납니다.</div>'; return; }
+  g.innerHTML = ps.map(p => `<div class="field"><label>${esc(p.artist)} · ${esc(p.phone.label)}</label><input type="text" data-sk="${esc(p.key)}" value="${esc(state.serials[p.key] || '')}" placeholder="예: R58N12ABCDE (비워도 됨)"></div>`).join('');
+  g.querySelectorAll('input').forEach(i => i.onchange = () => { state.serials[i.dataset.sk] = i.value.trim(); save(); });
+}
+
+function adbProblems() {
+  const a = state.adb, p = [];
+  if (a.inX === '' || a.inY === '') p.push('아이디 입력칸 좌표');
+  if ((a.submit === 'tap' || a.submit === 'both') && (a.btnX === '' || a.btnY === '')) p.push('등록 버튼 좌표');
+  return p;
+}
+/* adb shell input text 용 이스케이프 (기기 쉘 + 공백) */
+function adbText(id) {
+  // 기기 쪽 sh 에서 작은따옴표로 감싸므로 ' 만 처리, 공백은 %s
+  return id.replace(/'/g, `'\\''`).replace(/ /g, '%s');
+}
+/* .bat 안에서 % 는 %% 로 */
+function batSafe(s) { return s.replace(/%/g, '%%'); }
+
+function phoneBlock(ph, idsOverride) {
+  const a = state.adb;
+  const ser = state.serials[ph.artist + '|' + ph.idx];
+  const dev = ser ? ` -s ${ser}` : '';
+  const ids = idsOverride || ph.phone.ids.filter((_, i) => !ph.phone.done[i]);
+  const skipped = [];
+  const L = [];
+  const title = `${ph.artist} ${ph.phone.label}`;
+  L.push(`echo.`);
+  L.push(`echo ==================================================`);
+  L.push(`echo   ${batSafe(title).replace(/[&|<>^]/g, '^$&')}  -  ${ids.length}명 자동입력`);
+  L.push(`echo ==================================================`);
+  L.push(`adb${dev} get-state >nul 2>&1 || (echo [오류] 폰이 연결되지 않았습니다 ${ser || ''} - USB 디버깅을 확인하세요. & pause & goto :eof)`);
+  if (a.pause) { L.push(`echo 영상통화 앱의 당첨자 등록 화면을 띄운 뒤 아무 키나 누르세요...`); L.push(`pause >nul`); }
+  ids.forEach((id, n) => {
+    if (/[^\x21-\x7E ]/.test(id) || /["]/.test(id)) { skipped.push(id); return; }
+    const cmds = [];
+    cmds.push(`input tap ${+a.inX} ${+a.inY}`);
+    if (+a.pre > 0) cmds.push(`sleep ${+a.pre}`);
+    if (a.clear) cmds.push(`input keyevent 123`, `input keyevent ${Array(40).fill(67).join(' ')}`);
+    cmds.push(`input text '${adbText(id)}'`);
+    if (a.submit === 'enter' || a.submit === 'both') cmds.push(`input keyevent 66`);
+    if (a.submit === 'tap' || a.submit === 'both') { if (a.submit === 'both') cmds.push('sleep 0.2'); cmds.push(`input tap ${+a.btnX} ${+a.btnY}`); }
+    if (a.hidekb) cmds.push(`input keyevent 4`);
+    if (+a.delay > 0) cmds.push(`sleep ${+a.delay}`);
+    L.push(`echo [${n + 1}/${ids.length}] ${batSafe(id).replace(/[&|<>^]/g, '^$&')}`);
+    L.push(`adb${dev} shell "${batSafe(cmds.join('; '))}"`);
+  });
+  if (skipped.length) {
+    L.push(`echo.`);
+    L.push(`echo [주의] 아래 아이디는 한글/특수문자라 자동입력하지 못했습니다. 직접 입력하세요:`);
+    skipped.forEach(s => L.push(`echo    - ${batSafe(s).replace(/[&|<>^"]/g, '^$&')}`));
+  }
+  L.push(`echo ${batSafe(title).replace(/[&|<>^]/g, '^$&')} 완료!`);
+  return { lines: L, skipped };
+}
+
+function downloadBat(phones, testOnly) {
+  const prob = adbProblems();
+  if (prob.length) { toast('④ 자동입력 설정에서 좌표를 먼저 입력하세요'); switchTab('adb'); $('adb-msg').innerHTML = `<span class="err">입력 필요: ${prob.join(', ')}</span>`; return; }
+  const L = ['@echo off', 'chcp 65001 >nul', 'cd /d "%~dp0"', 'if exist adb.exe set "PATH=%~dp0;%PATH%"', 'where adb >nul 2>&1 || (echo [오류] adb 를 찾을 수 없습니다. 이 파일을 platform-tools 폴더 안에 넣고 실행하세요. & pause & exit /b)', 'adb start-server >nul 2>&1', 'call :main', 'echo.', 'echo 모든 작업이 끝났습니다. 앱 화면에서 등록 결과를 꼭 확인하세요.', 'pause', 'exit /b', '', ':main'];
+  let total = 0, skippedAll = 0;
+  phones.forEach((ph, k) => {
+    const ids = testOnly ? [ph.phone.ids[0]] : null;
+    const b = phoneBlock(ph, ids);
+    total += (ids || ph.phone.ids.filter((_, i) => !ph.phone.done[i])).length; skippedAll += b.skipped.length;
+    if (k > 0 && !state.serials[ph.artist + '|' + ph.idx]) { L.push('echo.', 'echo 다음 폰으로 바꿔 꽂고 아무 키나 누르세요...', 'pause >nul'); }
+    L.push(...b.lines);
+  });
+  L.push('goto :eof');
+  const bat = L.join('\r\n') + '\r\n';
+  const blob = new Blob([bat], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const aEl = document.createElement('a');
+  const name = testOnly ? '테스트_자동입력.bat' : phones.length === 1 ? `자동입력_${phones[0].artist}_${phones[0].phone.label}.bat` : '자동입력_전체폰.bat';
+  aEl.href = url; aEl.download = name.replace(/[\\\/:*?"<>|]/g, '_'); document.body.appendChild(aEl); aEl.click(); aEl.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(`${name} 저장 — ${total}명${skippedAll ? ` (수동 ${skippedAll}명)` : ''}`);
+}
+$('btn-bat-all').onclick = () => {
+  const ps = allPhones().filter(p => p.phone.ids.length);
+  if (!ps.length) { toast('데이터가 없습니다'); return; }
+  downloadBat(ps);
+};
+$('btn-adb-test').onclick = () => {
+  const ps = allPhones().filter(p => p.phone.ids.length);
+  const ph = getPhone(state.cur.key) || ps[0];
+  if (!ph) { toast('당첨자를 먼저 불러오세요'); return; }
+  downloadBat([ph], true);
+};
+
+/* ---------- 시작 ---------- */
+load();
+$('cfg-artists').value = state.cfg.artists; $('cfg-phones').value = state.cfg.phones; $('cfg-per').value = state.cfg.per;
+renderArtistInputs(); renderAdb(); updateHeader();
+</script>
+</body>
+</html>
