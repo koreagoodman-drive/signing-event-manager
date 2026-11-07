@@ -80,6 +80,15 @@
   .big-card { background: var(--bg2); border: 1px solid var(--accent); border-radius: var(--radius); padding: 28px 20px; text-align: center; }
   .big-pos { font-size: 13px; color: var(--text2); margin-bottom: 10px; }
   .big-id { font-size: 46px; font-weight: 700; letter-spacing: 1px; word-break: break-all; font-family: ui-monospace, Consolas, monospace; color: var(--accent); cursor: pointer; user-select: all; }
+  .big-name-wrap { margin-top: 18px; padding-top: 16px; border-top: 0.5px dashed var(--border2); }
+  .big-name-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .big-name { font-size: 30px; font-weight: 700; color: #fff; word-break: break-all; cursor: pointer; }
+  .big-step { display: inline-flex; gap: 6px; margin-top: 14px; font-size: 12px; }
+  .big-step span { padding: 3px 10px; border-radius: 999px; background: var(--bg4); color: var(--text3); }
+  .big-step span.on { background: var(--accent); color: #000; font-weight: 700; }
+  .big-step span.ok { background: rgba(71,255,138,0.15); color: var(--success); }
+  .big-id.dim, .big-name.dim { opacity: .45; }
+  .id-item .nm { color: var(--text2); font-size: 13px; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .big-next { font-size: 14px; color: var(--text3); margin-top: 10px; font-family: ui-monospace, Consolas, monospace; }
   .big-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
   .big-actions .btn { padding: 14px 22px; font-size: 15px; }
@@ -139,21 +148,28 @@
         <div class="field"><label>아티스트당 폰</label><input type="number" id="cfg-phones" min="1" max="20" value="2"></div>
         <div class="field"><label>폰당 인원</label><input type="number" id="cfg-per" min="1" max="500" value="30"></div>
       </div>
+      <div class="row" style="margin-top:14px;">
+        <div class="field" style="flex:1;min-width:260px"><label>카톡·라인에 표시될 이름 형식 — 쓸 수 있는 칸: <code>{번호}</code> <code>{이름}</code> <code>{아이디}</code> <code>{아티스트}</code> <code>{폰}</code></label><input type="text" id="cfg-tpl" value="{번호}_{이름}" placeholder="{번호}_{이름}"></div>
+        <div class="field"><label>미리보기</label><div id="tpl-preview" style="padding:9px 0;font-size:14px;color:var(--accent)"></div></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <label class="chk"><input type="checkbox" id="cfg-twostep" checked> 등록할 때 <b>아이디 → 표시 이름</b> 순서로 두 번 복사 (친구 추가 후 이름 바꾸기용)</label>
+      </div>
       <div class="artist-inputs" id="artist-inputs"></div>
     </div>
 
     <div class="card">
       <h2>당첨자 아이디 넣기</h2>
       <div class="desc">
-        <b>방법 A — 엑셀 업로드:</b> <code>아티스트</code>(또는 멤버) 열과 <code>아이디</code>(또는 ID) 열이 있으면 자동 인식합니다. <code>폰</code> 열이 있으면 그 번호대로, 없으면 순서대로 30명씩 나눕니다. 시트가 여러 개면 시트 이름을 아티스트로 씁니다.<br>
-        <b>방법 B — 붙여넣기:</b> 엑셀에서 두 열(아티스트 / 아이디)을 복사해서 그대로 붙여넣거나, 아이디만 붙여넣고 아래에서 아티스트를 고르세요. 한 줄에 하나씩, 또는 쉼표·공백으로 구분해도 됩니다.
+        <b>방법 A — 엑셀 업로드:</b> <code>아티스트</code>(또는 멤버) 열과 <code>아이디</code>(또는 ID) 열, <code>이름</code>(또는 성명·닉네임) 열이 있으면 자동 인식합니다. <code>폰</code> 열이 있으면 그 번호대로, 없으면 순서대로 30명씩 나눕니다. 시트가 여러 개면 시트 이름을 아티스트로 씁니다.<br>
+        <b>방법 B — 붙여넣기:</b> 엑셀에서 <code>아티스트 | 아이디 | 이름</code> 열을 복사해 그대로 붙여넣거나, 한 줄에 <code>아이디 이름</code>(띄어쓰기로 구분)만 붙여넣고 아래에서 아티스트를 고르세요. 이름이 없으면 아이디만 넣어도 됩니다.
       </div>
       <div class="upload-zone" id="upload-zone">
         <div class="upload-title">📂 엑셀 파일 끌어다 놓기 / 클릭해서 선택</div>
         <div class="upload-sub">.xlsx · .xls · .csv (추첨 프로그램에서 받은 당첨자 엑셀도 가능)</div>
       </div>
       <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none">
-      <textarea id="paste-box" placeholder="예시 1) 아이디만&#10;user_abc&#10;fan1234&#10;&#10;예시 2) 엑셀 두 열 복사&#10;아티스트A	user_abc&#10;아티스트A	fan1234&#10;아티스트B	star_99"></textarea>
+      <textarea id="paste-box" placeholder="예시 1) 아이디 이름 (한 줄에 한 명)&#10;user_abc 김민지&#10;fan1234 이서준&#10;&#10;예시 2) 엑셀에서 세 열 복사 (아티스트 / 아이디 / 이름)&#10;아티스트A	user_abc	김민지&#10;아티스트B	star_99	박지우"></textarea>
       <div class="row" style="margin-top:12px;">
         <div class="field"><label>아이디만 붙여넣었다면 → 아티스트</label><select id="paste-artist"></select></div>
         <div class="field"><label>기존 데이터</label>
@@ -189,7 +205,13 @@
       <div>
         <div class="big-card">
           <div class="big-pos" id="big-pos">-</div>
+          <div class="big-name-label">아이디 (친구 추가 검색용)</div>
           <div class="big-id" id="big-id" title="클릭하면 복사">-</div>
+          <div class="big-name-wrap" id="big-name-wrap">
+            <div class="big-name-label">카톡·라인에 표시될 이름</div>
+            <div class="big-name" id="big-name" title="클릭하면 복사">-</div>
+          </div>
+          <div class="big-step" id="big-step"></div>
           <div class="big-next" id="big-next"></div>
           <div class="big-actions">
             <button class="btn" id="btn-back">◀ 이전</button>
@@ -197,9 +219,11 @@
             <button class="btn" id="btn-skip">건너뛰기 ▶</button>
           </div>
           <div class="hint">
-            <kbd>Space</kbd>/<kbd>Enter</kbd> 복사 후 완료 처리 &amp; 다음 · <kbd>←</kbd> 이전 · <kbd>→</kbd> 건너뛰기 · <kbd>[</kbd> <kbd>]</kbd> 폰 이동<br>
-            📱 폰에서 직접 넣는다면: 이 파일을 폰으로 보내 폰 브라우저로 열고, 같은 아이디를 붙여넣은 뒤 이 화면에서 <b>탭 → 앱에서 붙여넣기</b>를 반복하세요.<br>
-            🤖 가장 빠른 방법은 <b>④ 자동입력(ADB)</b> — PC에 폰을 USB로 연결하면 30명을 자동으로 입력합니다.
+<kbd>Space</kbd>/<kbd>Enter</kbd> ① 아이디 복사 → 카톡·라인에서 친구 검색·추가 → <kbd>Space</kbd> ② 표시 이름 복사 → 친구 이름 변경에 붙여넣기 → 자동으로 다음 사람<br>
+            <kbd>←</kbd> 이전 · <kbd>→</kbd> 건너뛰기 · <kbd>[</kbd> <kbd>]</kbd> 폰 이동 · 아이디/이름 글자를 클릭해도 복사됩니다.<br>
+            💻 <b>PC 카카오톡·PC 라인</b>에 그 폰의 계정으로 로그인해서 추가하면, 친구 목록과 바꾼 이름이 폰에도 그대로 반영돼 가장 빠릅니다.<br>
+            📱 폰에서 직접 넣는다면: 이 파일을 폰으로 보내 폰 브라우저로 열고 같은 목록을 붙여넣은 뒤, 이 화면에서 <b>탭 → 앱에서 붙여넣기</b>를 반복하세요.<br>
+            🤖 <b>④ 자동입력(ADB)</b>은 안드로이드 폰에 <b>아이디 입력</b>만 자동으로 해 줍니다. 한글 표시 이름은 ADB로 입력할 수 없어서 이름 바꾸기는 위 2단계 복사로 해 주세요.
           </div>
         </div>
       </div>
@@ -251,7 +275,7 @@
 <script>
 const STORE_KEY = 'vc-winner-register-v1';
 let state = {
-  cfg: { artists: 5, phones: 2, per: 30 },
+  cfg: { artists: 5, phones: 2, per: 30, tpl: '{번호}_{이름}', twoStep: true },
   artistNames: ['아티스트1','아티스트2','아티스트3','아티스트4','아티스트5'],
   data: {},           // artistName -> [{label, ids:[], done:[bool]}]
   serials: {},        // "artist|phoneIdx" -> serial
@@ -264,7 +288,9 @@ function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); 
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-    if (s && s.cfg) state = Object.assign(state, s, { adb: Object.assign(state.adb, s.adb || {}) });
+    if (s && s.cfg) state = Object.assign(state, s, { cfg: Object.assign(state.cfg, s.cfg), adb: Object.assign(state.adb, s.adb || {}) });
+    Object.values(state.data).forEach(ph => ph.forEach(p => { if (!p.names) p.names = p.ids.map(() => ''); }));
+    if (!state.cur.step) state.cur.step = 0;
   } catch (e) {}
 }
 
@@ -316,31 +342,55 @@ function renderPasteArtist() {
 function cleanId(v) {
   return String(v == null ? '' : v).replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/^@/, '').trim();
 }
-function splitIds(text) {
-  return text.split(/[\r\n,;]+|\s+/).map(cleanId).filter(Boolean);
+function cleanName(v) { return String(v == null ? '' : v).replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim(); }
+/* 붙여넣기 줄 → {ids, names}. 한 줄에 "아이디 이름", 또는 아이디만(쉼표 구분 가능) */
+function parseLines(text) {
+  const ids = [], names = [];
+  text.split(/\r?\n/).forEach(line => {
+    line = line.trim(); if (!line) return;
+    const m = line.match(/^(\S+)\s+(.+)$/);
+    if (m && !line.includes(',')) { const id = cleanId(m[1]); if (id) { ids.push(id); names.push(cleanName(m[2])); } }
+    else line.split(/[,;]+/).forEach(t => { const id = cleanId(t); if (id) { ids.push(id); names.push(''); } });
+  });
+  return { ids, names };
+}
+/* 표시 이름 만들기 */
+function displayName(artist, phone, k) {
+  const tpl = state.cfg.tpl || '{이름}';
+  const nm = (phone.names && phone.names[k]) || phone.ids[k] || '';
+  const width = String(phone.ids.length).length < 2 ? 2 : String(phone.ids.length).length;
+  let out = tpl.replace(/\{번호\}/g, String(k + 1).padStart(width, '0'))
+    .replace(/\{이름\}/g, nm).replace(/\{아이디\}/g, phone.ids[k] || '')
+    .replace(/\{아티스트\}/g, artist).replace(/\{폰\}/g, phone.label);
+  out = out.replace(/^[\s_\-.·|/]+|[\s_\-.·|/]+$/g, '').replace(/([_\-.·|/])\1+/g, '$1').trim();
+  return out || nm || phone.ids[k] || '';
+}
+function renderTplPreview() {
+  const fake = { label: '폰1', ids: ['user_abc'], names: ['김민지'] };
+  $('tpl-preview').textContent = displayName(state.artistNames[0] || '아티스트', fake, 0) + '  (예: 1번 김민지 / user_abc)';
 }
 
 /* 아티스트별 아이디 목록 → 폰별로 나누기. phoneHints: 같은 길이의 폰번호 배열(없으면 null) */
-function distribute(artist, ids, phoneHints, mode) {
+function distribute(artist, ids, names, phoneHints, mode) {
   const per = state.cfg.per;
   let existing = [];
   if (mode === 'append' && state.data[artist]) {
-    state.data[artist].forEach(p => p.ids.forEach((id, i) => existing.push({ id, done: p.done[i], phone: null })));
+    state.data[artist].forEach(p => p.ids.forEach((id, i) => existing.push({ id, name: (p.names || [])[i] || '', done: p.done[i], phone: null })));
   }
-  const items = existing.concat(ids.map((id, i) => ({ id, done: false, phone: phoneHints ? phoneHints[i] : null })));
+  const items = existing.concat(ids.map((id, i) => ({ id, name: (names && names[i]) || '', done: false, phone: phoneHints ? phoneHints[i] : null })));
   let phones = [];
   if (items.some(x => x.phone)) {
     // 엑셀에 폰 번호가 있으면 그대로
     const map = new Map();
     items.forEach(x => { const k = x.phone || '1'; if (!map.has(k)) map.set(k, []); map.get(k).push(x); });
     [...map.keys()].sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0) || String(a).localeCompare(String(b))).forEach(k => {
-      const arr = map.get(k); phones.push({ label: /^\d+$/.test(k) ? `폰${k}` : String(k), ids: arr.map(x => x.id), done: arr.map(x => x.done) });
+      const arr = map.get(k); phones.push({ label: /^\d+$/.test(k) ? `폰${k}` : String(k), ids: arr.map(x => x.id), names: arr.map(x => x.name), done: arr.map(x => x.done) });
     });
   } else {
     const nPhones = Math.max(state.cfg.phones, Math.ceil(items.length / per));
     for (let p = 0; p < nPhones; p++) {
       const arr = items.slice(p * per, (p + 1) * per);
-      phones.push({ label: `폰${p + 1}`, ids: arr.map(x => x.id), done: arr.map(x => x.done) });
+      phones.push({ label: `폰${p + 1}`, ids: arr.map(x => x.id), names: arr.map(x => x.name), done: arr.map(x => x.done) });
     }
   }
   state.data[artist] = phones;
@@ -357,7 +407,9 @@ function reportLoad(groups) {
     const phones = state.data[artist];
     const dupes = findDupes(g.ids);
     const odd = g.ids.filter(id => /[^\x21-\x7E]/.test(id));
-    let l = `<span class="ok">✓ ${esc(artist)}</span> — ${g.ids.length}명 → ${phones.map(p => `${esc(p.label)} ${p.ids.length}명`).join(' / ')}`;
+    const named = (g.names || []).filter(Boolean).length;
+    let l = `<span class="ok">✓ ${esc(artist)}</span> — ${g.ids.length}명 (이름 ${named}명) → ${phones.map(p => `${esc(p.label)} ${p.ids.length}명`).join(' / ')}`;
+    if (!named) l += ` <span class="warn">— 이름 열이 없어 표시 이름에 {이름} 대신 아이디가 들어갑니다</span>`;
     if (phones.some(p => p.ids.length > state.cfg.per)) l += ` <span class="warn">(폰당 ${state.cfg.per}명 초과 폰 있음)</span>`;
     if (dupes.length) l += `<br>&nbsp;&nbsp;<span class="warn">⚠ 중복 아이디 ${dupes.length}개: ${dupes.slice(0, 10).map(esc).join(', ')}${dupes.length > 10 ? ' …' : ''}</span>`;
     if (odd.length) l += `<br>&nbsp;&nbsp;<span class="warn">⚠ 한글·공백 등 특수문자 포함 ${odd.length}개 (자동입력 불가, 수동 확인): ${odd.slice(0, 5).map(esc).join(', ')}</span>`;
@@ -386,7 +438,8 @@ $('btn-paste').onclick = () => {
     const table = rows.map(r => r.split('\t'));
     parseTable(table, groups, $('paste-artist').value);
   } else {
-    groups[$('paste-artist').value] = { ids: splitIds(text), phones: null };
+    const r = parseLines(text);
+    groups[$('paste-artist').value] = { ids: r.ids, names: r.names, phones: null };
   }
   applyGroups(groups, mode);
 };
@@ -394,9 +447,9 @@ $('btn-paste').onclick = () => {
 function applyGroups(groups, mode) {
   const keys = Object.keys(groups).filter(k => groups[k].ids.length);
   if (!keys.length) { $('load-msg').innerHTML = '<span class="err">아이디를 찾지 못했습니다. 열 이름(아티스트 / 아이디)을 확인해 주세요.</span>'; return; }
-  keys.forEach(a => distribute(a, groups[a].ids, groups[a].phones, mode));
+  keys.forEach(a => distribute(a, groups[a].ids, groups[a].names, groups[a].phones, mode));
   const out = {}; keys.forEach(k => out[k] = groups[k]);
-  if (!state.cur.key) { const a = keys[0]; state.cur = { key: a + '|0', idx: 0 }; }
+  if (!state.cur.key) { const a = keys[0]; state.cur = { key: a + '|0', idx: 0, step: 0 }; }
   reportLoad(out);
 }
 
@@ -407,24 +460,28 @@ function parseTable(table, groups, defaultArtist) {
   const head = table[0].map(c => String(c).replace(/\s/g, '').toLowerCase());
   const find = (...keys) => head.findIndex(h => keys.some(k => h.includes(k)));
   let ai = find('아티스트', '멤버', 'artist', 'member', '가수');
-  let ii = find('아이디', 'id', '계정', '닉네임', 'account', 'user');
+  let ii = find('아이디', '카톡id', '라인id', 'id', '계정', 'account', 'user');
+  let ni = head.findIndex((h, k) => k !== ii && k !== ai && ['이름', '성명', '닉네임', '표시', 'name', '성함'].some(x => h.includes(x)));
   let pi = find('핸드폰', '휴대폰', '폰', 'phone', '기기', '디바이스', 'device');
-  if (pi === ai || pi === ii) pi = -1;
-  let body = table;
-  if (ai >= 0 || ii >= 0) body = table.slice(1);
+  if (pi === ai || pi === ii || pi === ni) pi = -1;
+  const hasHeader = ai >= 0 || ii >= 0 || ni >= 0;
+  const body = hasHeader ? table.slice(1) : table;
+  const cols = Math.max(...table.map(r => r.length));
   if (ii < 0) {
-    // 헤더가 없으면: 2열 이상 → 첫 열 아티스트, 둘째 열 아이디 / 1열 → 아이디
-    const cols = Math.max(...table.map(r => r.length));
+    // 아이디 열 이름이 없으면: 아티스트 열 다음 / 헤더 없으면 1열=아이디, 2열 이상이면 1열=아티스트·2열=아이디
     if (ai >= 0) ii = ai === 0 ? 1 : 0;
-    else if (cols >= 2) { ai = 0; ii = 1; }
+    else if (cols >= 2 && !hasHeader) { ai = 0; ii = 1; }
     else ii = 0;
   }
+  // 헤더 없는 표: 아이디 바로 다음 열을 이름으로 (예: 아티스트 | 아이디 | 이름)
+  if (!hasHeader && ni < 0 && cols > ii + 1 && ii + 1 !== ai && ii + 1 !== pi) ni = ii + 1;
   body.forEach(r => {
     const id = cleanId(r[ii]);
     if (!id) return;
     const artist = ai >= 0 ? (String(r[ai] || '').trim() || defaultArtist) : defaultArtist;
-    if (!groups[artist]) groups[artist] = { ids: [], phones: pi >= 0 ? [] : null };
+    if (!groups[artist]) groups[artist] = { ids: [], names: [], phones: pi >= 0 ? [] : null };
     groups[artist].ids.push(id);
+    groups[artist].names.push(ni >= 0 ? cleanName(r[ni]) : '');
     if (groups[artist].phones) groups[artist].phones.push(String(r[pi] || '').replace(/[^0-9A-Za-z가-힣]/g, '').replace(/^(폰|phone)/i, '') || null);
   });
 }
@@ -514,7 +571,7 @@ function renderBoard() {
 function openPhone(key) {
   const ph = getPhone(key); if (!ph) return;
   const first = ph.phone.done.findIndex(x => !x);
-  state.cur = { key, idx: first < 0 ? 0 : first }; save(); switchTab('reg');
+  state.cur = { key, idx: first < 0 ? 0 : first, step: 0 }; save(); switchTab('reg');
 }
 $('btn-reset-done').onclick = () => {
   if (!confirm('모든 폰의 완료 체크를 해제할까요?')) return;
@@ -527,7 +584,7 @@ function renderReg() {
   const sel = $('reg-phone');
   if (!ps.length) {
     sel.innerHTML = '<option>당첨자 없음</option>';
-    $('big-id').textContent = '-'; $('big-pos').textContent = '① 에서 당첨자를 먼저 불러와 주세요'; $('big-next').textContent = ''; $('id-list').innerHTML = '';
+    $('big-id').textContent = '-'; $('big-name').textContent = '-'; $('big-step').innerHTML = ''; $('big-pos').textContent = '① 에서 당첨자를 먼저 불러와 주세요'; $('big-next').textContent = ''; $('id-list').innerHTML = '';
     return;
   }
   if (!getPhone(state.cur.key)) state.cur = { key: ps[0].key, idx: 0 };
@@ -540,24 +597,32 @@ function renderReg() {
   if (state.cur.idx >= ids.length) state.cur.idx = Math.max(0, ids.length - 1);
   const i = state.cur.idx;
   const doneN = phone.done.filter(Boolean).length;
-  if (!ids.length) { $('big-id').textContent = '-'; $('big-pos').textContent = '이 폰에는 배정된 아이디가 없습니다'; $('big-next').textContent = ''; }
+  const two = !!state.cfg.twoStep, step = two ? (state.cur.step || 0) : 0;
+  $('big-id').classList.toggle('dim', two && step === 1);
+  $('big-name').classList.toggle('dim', two && step === 0);
+  $('big-step').innerHTML = '';
+  if (!ids.length) { $('big-id').textContent = '-'; $('big-name').textContent = '-'; $('big-pos').textContent = '이 폰에는 배정된 아이디가 없습니다'; $('big-next').textContent = ''; }
   else if (doneN === ids.length) {
     $('big-pos').textContent = `${artist} · ${phone.label} — ${ids.length}명 모두 완료 🎉`;
-    $('big-id').textContent = '완료!'; $('big-next').textContent = '] 키 또는 "다음 폰 ▶" 으로 넘어가세요';
+    $('big-id').textContent = '완료!'; $('big-name').textContent = ''; $('big-next').textContent = '] 키 또는 "다음 폰 ▶" 으로 넘어가세요';
+    $('big-id').classList.remove('dim');
   } else {
     $('big-pos').textContent = `${artist} · ${phone.label} — ${i + 1} / ${ids.length}번째 (완료 ${doneN})`;
     $('big-id').textContent = ids[i];
-    $('big-next').textContent = ids[i + 1] ? `다음: ${ids[i + 1]}` : '마지막 아이디입니다';
+    $('big-name').textContent = displayName(artist, phone, i);
+    if (two) $('big-step').innerHTML = `<span class="${step === 0 ? 'on' : 'ok'}">① 아이디 복사</span><span class="${step === 1 ? 'on' : ''}">② 이름 복사</span>`;
+    $('big-next').textContent = ids[i + 1] ? `다음: ${ids[i + 1]}  ·  ${displayName(artist, phone, i + 1)}` : '마지막 사람입니다';
   }
+  $('btn-copy-next').textContent = two ? (step === 0 ? '📋 ① 아이디 복사 (Space)' : '📋 ② 이름 복사하고 다음 (Space)') : '📋 아이디 복사하고 다음 (Space)';
   const dup = new Set(findDupes(ids).map(x => x.toLowerCase()));
   $('id-list').innerHTML = ids.map((id, k) => `<div class="id-item ${phone.done[k] ? 'done' : ''} ${k === i && doneN !== ids.length ? 'current' : ''}" data-k="${k}">
-      <span class="n">${k + 1}</span><span class="v">${esc(id)}</span>
+      <span class="n">${k + 1}</span><span class="v">${esc(id)}</span><span class="nm">${esc(displayName(artist, phone, k))}</span>
       ${dup.has(id.toLowerCase()) ? '<span class="flag">중복</span>' : ''}${/[^\x21-\x7E]/.test(id) ? '<span class="flag">특수문자</span>' : ''}
       <span class="ck" data-ck="${k}">${phone.done[k] ? '✓' : ''}</span></div>`).join('');
   $('id-list').querySelectorAll('.id-item').forEach(el => el.onclick = e => {
     const k = +el.dataset.k;
     if (e.target.dataset.ck !== undefined) { phone.done[k] = !phone.done[k]; }
-    else { state.cur.idx = k; }
+    else { state.cur.idx = k; state.cur.step = 0; }
     save(); renderReg(); updateHeader();
   });
   const cur = $('id-list').querySelector('.current'); if (cur) cur.scrollIntoView({ block: 'nearest' });
@@ -578,7 +643,13 @@ function copyAndNext() {
   const ph = getPhone(state.cur.key); if (!ph || !ph.phone.ids.length) return;
   const p = ph.phone, i = state.cur.idx;
   if (p.done.every(Boolean)) { nextPhone(1); return; }
-  copyText(p.ids[i], `복사: ${p.ids[i]}`);
+  if (state.cfg.twoStep && !state.cur.step) {
+    copyText(p.ids[i], `① 아이디 복사: ${p.ids[i]}`);
+    state.cur.step = 1; save(); renderReg(); return;
+  }
+  if (state.cfg.twoStep) { const nm = displayName(ph.artist, p, i); copyText(nm, `② 이름 복사: ${nm}`); }
+  else copyText(p.ids[i], `복사: ${p.ids[i]}`);
+  state.cur.step = 0;
   p.done[i] = true;
   let n = p.done.findIndex((d, k) => !d && k > i); if (n < 0) n = p.done.findIndex(d => !d);
   state.cur.idx = n < 0 ? i : n;
@@ -586,7 +657,7 @@ function copyAndNext() {
 }
 function move(d) {
   const ph = getPhone(state.cur.key); if (!ph) return;
-  state.cur.idx = Math.min(Math.max(0, state.cur.idx + d), ph.phone.ids.length - 1); save(); renderReg();
+  state.cur.idx = Math.min(Math.max(0, state.cur.idx + d), ph.phone.ids.length - 1); state.cur.step = 0; save(); renderReg();
 }
 function nextPhone(d) {
   const ps = allPhones(); if (!ps.length) return;
@@ -599,7 +670,8 @@ $('btn-skip').onclick = () => move(1);
 $('btn-next-phone').onclick = () => nextPhone(1);
 $('btn-prev-phone').onclick = () => nextPhone(-1);
 $('big-id').onclick = () => { const ph = getPhone(state.cur.key); if (ph && ph.phone.ids[state.cur.idx]) copyText(ph.phone.ids[state.cur.idx]); };
-$('btn-copy-all').onclick = () => { const ph = getPhone(state.cur.key); if (ph) copyText(ph.phone.ids.join('\n'), `${ph.phone.ids.length}명 전체 복사`); };
+$('btn-copy-all').onclick = () => { const ph = getPhone(state.cur.key); if (ph) copyText(ph.phone.ids.map((id, k) => id + '\t' + displayName(ph.artist, ph.phone, k)).join('\n'), `${ph.phone.ids.length}명 (아이디+이름) 전체 복사`); };
+$('big-name').onclick = () => { const ph = getPhone(state.cur.key); if (ph && ph.phone.ids[state.cur.idx]) { const nm = displayName(ph.artist, ph.phone, state.cur.idx); copyText(nm, `이름 복사: ${nm}`); } };
 $('btn-bat-one').onclick = () => { const ph = getPhone(state.cur.key); if (ph) downloadBat([ph]); };
 
 document.addEventListener('keydown', e => {
@@ -621,14 +693,14 @@ $('btn-xlsx-all').onclick = () => {
   artists.forEach(a => {
     const phones = state.data[a];
     const maxN = Math.max(...phones.map(p => p.ids.length), 0);
-    const aoa = [['번호', ...phones.map(p => p.label)]];
-    for (let r = 0; r < maxN; r++) aoa.push([r + 1, ...phones.map(p => p.ids[r] || '')]);
+    const aoa = [['번호', ...phones.flatMap(p => [`${p.label} 아이디`, `${p.label} 표시이름`])]];
+    for (let r = 0; r < maxN; r++) aoa.push([r + 1, ...phones.flatMap(p => p.ids[r] ? [p.ids[r], displayName(a, p, r)] : ['', ''])]);
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{ wch: 6 }, ...phones.map(() => ({ wch: 22 }))];
+    ws['!cols'] = [{ wch: 6 }, ...phones.flatMap(() => [{ wch: 20 }, { wch: 20 }])];
     XLSX.utils.book_append_sheet(wb, ws, a.replace(/[\\\/\?\*\[\]:]/g, '').slice(0, 31) || 'Sheet');
   });
-  const all = [['아티스트', '폰', '번호', '아이디', '등록완료']];
-  ps.forEach(p => p.phone.ids.forEach((id, i) => all.push([p.artist, p.phone.label, i + 1, id, p.phone.done[i] ? 'O' : ''])));
+  const all = [['아티스트', '폰', '번호', '아이디', '이름', '표시이름', '등록완료']];
+  ps.forEach(p => p.phone.ids.forEach((id, i) => all.push([p.artist, p.phone.label, i + 1, id, (p.phone.names || [])[i] || '', displayName(p.artist, p.phone, i), p.phone.done[i] ? 'O' : ''])));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(all), '전체목록');
   const d = new Date(); const ds = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
   XLSX.writeFile(wb, `영상통화_폰별분배표_${ds}.xlsx`);
@@ -738,6 +810,10 @@ $('btn-adb-test').onclick = () => {
 /* ---------- 시작 ---------- */
 load();
 $('cfg-artists').value = state.cfg.artists; $('cfg-phones').value = state.cfg.phones; $('cfg-per').value = state.cfg.per;
+$('cfg-tpl').value = state.cfg.tpl; $('cfg-twostep').checked = !!state.cfg.twoStep;
+$('cfg-tpl').oninput = () => { state.cfg.tpl = $('cfg-tpl').value; save(); renderTplPreview(); };
+$('cfg-twostep').onchange = () => { state.cfg.twoStep = $('cfg-twostep').checked; state.cur.step = 0; save(); };
+renderTplPreview();
 renderArtistInputs(); renderAdb(); updateHeader();
 </script>
 </body>
