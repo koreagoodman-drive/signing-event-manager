@@ -113,6 +113,14 @@
   .steps code, .desc code { background: var(--bg4); padding: 1px 6px; border-radius: 4px; color: var(--accent); font-size: 12px; }
   label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text); cursor: pointer; }
 
+  .step-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 10px; background: var(--bg3); border-radius: var(--radius-sm); margin-bottom: 6px; }
+  .step-row select { min-width: 160px; }
+  .step-row input[type=number] { width: 80px; }
+  .step-row input.need { border-color: var(--warn); }
+  .step-label { flex: 1; min-width: 160px; }
+  .step-n { color: var(--text3); font-size: 12px; min-width: 20px; }
+  .step-hint { font-size: 12px; color: var(--text2); flex: 1; }
+  .step-btns { display: flex; gap: 4px; margin-left: auto; }
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--accent); color: #000; padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: 700; opacity: 0; transition: all .2s; pointer-events: none; z-index: 99; max-width: calc(100% - 32px); }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
@@ -135,7 +143,7 @@
     <button class="tab active" data-tab="load">① 당첨자 불러오기</button>
     <button class="tab" data-tab="board">② 폰별 분배 현황</button>
     <button class="tab" data-tab="reg">③ 등록하기</button>
-    <button class="tab" data-tab="adb">④ 자동입력 설정 (ADB)</button>
+    <button class="tab" data-tab="adb">④ 자동입력 매크로</button>
   </div>
 
   <!-- ① 불러오기 -->
@@ -223,7 +231,7 @@
             <kbd>←</kbd> 이전 · <kbd>→</kbd> 건너뛰기 · <kbd>[</kbd> <kbd>]</kbd> 폰 이동 · 아이디/이름 글자를 클릭해도 복사됩니다.<br>
             💻 <b>PC 카카오톡·PC 라인</b>에 그 폰의 계정으로 로그인해서 추가하면, 친구 목록과 바꾼 이름이 폰에도 그대로 반영돼 가장 빠릅니다.<br>
             📱 폰에서 직접 넣는다면: 이 파일을 폰으로 보내 폰 브라우저로 열고 같은 목록을 붙여넣은 뒤, 이 화면에서 <b>탭 → 앱에서 붙여넣기</b>를 반복하세요.<br>
-            🤖 <b>④ 자동입력(ADB)</b>은 안드로이드 폰에 <b>아이디 입력</b>만 자동으로 해 줍니다. 한글 표시 이름은 ADB로 입력할 수 없어서 이름 바꾸기는 위 2단계 복사로 해 주세요.
+            🤖 안드로이드라면 <b>④ 자동입력 매크로</b>로 친구 추가와 이름 변경까지 자동으로 할 수 있습니다.
           </div>
         </div>
       </div>
@@ -234,37 +242,45 @@
   <!-- ④ ADB -->
   <div class="panel" id="tab-adb">
     <div class="card">
-      <h2>ADB 자동입력이란?</h2>
-      <div class="desc">PC에 USB로 연결한 안드로이드 폰에 <b>아이디 입력 → 등록 버튼 누르기</b>를 자동으로 반복시키는 방식입니다. 폰 1대당 30명이 수십 초 안에 끝납니다. (아이폰은 지원되지 않습니다)</div>
+      <h2>자동입력 매크로 (안드로이드 + PC)</h2>
+      <div class="desc">PC에 USB로 연결한 안드로이드 폰에서 <b>친구 추가 → 아이디 입력 → 추가 → 이름 변경</b>을 한 명씩 자동으로 반복합니다. 동작 순서는 아래에서 직접 짤 수 있어서 카카오톡·라인 모두 쓸 수 있어요. (아이폰은 안 됩니다)</div>
       <ol class="steps">
-        <li><b>처음 한 번만:</b> PC에 <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" style="color:var(--accent)">Android Platform-Tools</a>를 받아 압축을 풀고, 받은 <code>.bat</code> 파일을 그 폴더(adb.exe가 있는 곳)에 넣으세요.</li>
-        <li>폰: <code>설정 → 휴대전화 정보 → 소프트웨어 정보 → 빌드번호</code> 7번 탭 → 개발자 옵션 켜기 → <code>USB 디버깅</code> 켜기.</li>
-        <li>개발자 옵션의 <code>포인터 위치</code>를 켜면 화면 위쪽에 터치 좌표(X, Y)가 보입니다. 영상통화 앱의 <b>아이디 입력칸</b>과 <b>추가/등록 버튼</b>을 눌러 좌표를 아래에 적으세요. (폰 기종이 같으면 한 번만 적으면 됩니다)</li>
-        <li>폰을 USB로 연결하고 "USB 디버깅 허용"을 누른 뒤, 앱에서 당첨자 등록 화면을 띄워 놓고 <code>.bat</code> 파일을 더블클릭하세요.</li>
-        <li>폰을 여러 대 동시에 연결했다면 <code>adb devices</code>로 나온 시리얼 번호를 각 폰에 적어 주세요. 한 대씩 꽂아서 하면 비워 둬도 됩니다.</li>
+        <li><b>PC (처음 한 번):</b> <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" style="color:var(--accent)">Android Platform-Tools</a>를 받아 압축을 풀고, 이 도구에서 받은 <code>.bat</code> 파일을 그 폴더(adb.exe가 있는 곳)에 넣습니다.</li>
+        <li><b>폰 (처음 한 번):</b> <code>설정 → 휴대전화 정보 → 소프트웨어 정보 → 빌드번호</code> 7번 탭 → 개발자 옵션에서 <code>USB 디버깅</code>과 <code>포인터 위치</code>를 켭니다.</li>
+        <li><b>한글 이름까지 넣으려면 (처음 한 번):</b> <a href="https://github.com/senzhk/ADBKeyBoard/releases" target="_blank" style="color:var(--accent)">ADBKeyBoard</a>의 <code>ADBKeyboard.apk</code>를 받아 platform-tools 폴더에 넣고, 명령 프롬프트에서 <code>adb install ADBKeyboard.apk</code> 를 실행합니다. 매크로가 시작할 때 이 키보드로 바꾸고, 끝나면 원래 키보드로 돌려놓습니다.</li>
+        <li><b>좌표 적기:</b> 포인터 위치가 켜져 있으면 화면을 누를 때 맨 위에 <code>X: 540 Y: 1200</code> 처럼 좌표가 보입니다. 앱에서 실제로 한 명을 손으로 추가해 보면서, 누르는 곳마다 좌표를 아래 단계에 적으세요. 같은 기종이면 한 번만 적으면 됩니다.</li>
+        <li>먼저 <b>🧪 1명 테스트</b>로 확인하고, 잘 되면 폰 전체(30명) 파일을 받아 실행하세요.</li>
       </ol>
+      <div class="msg"><span class="warn">⚠ 카카오·라인은 약관에서 자동화 프로그램 사용을 금지하고 있고, 짧은 시간에 아이디 검색을 많이 하면 검색 제한이나 계정 제재를 받을 수 있습니다. 한 명당 대기 시간을 넉넉히 두고(3초 이상 권장), 처음에는 적은 인원으로 시험해 보세요.</span></div>
     </div>
+
     <div class="card">
-      <h2>입력 동작 설정</h2>
-      <div class="desc">아이디 한 명마다: ① 입력칸 탭 → ② (선택) 기존 글자 지우기 → ③ 아이디 입력 → ④ 등록 버튼 탭 또는 엔터 → ⑤ 대기</div>
-      <div class="adb-grid">
-        <div class="field"><label>① 아이디 입력칸 좌표 (X, Y)</label><div class="xy"><input type="number" id="adb-in-x" placeholder="X"><input type="number" id="adb-in-y" placeholder="Y"></div></div>
-        <div class="field"><label>④ 등록 방식</label><select id="adb-submit"><option value="tap">등록 버튼 탭</option><option value="enter">키보드 엔터</option><option value="both">엔터 후 버튼 탭</option></select></div>
-        <div class="field"><label>④ 등록 버튼 좌표 (X, Y)</label><div class="xy"><input type="number" id="adb-btn-x" placeholder="X"><input type="number" id="adb-btn-y" placeholder="Y"></div></div>
-        <div class="field"><label>⑤ 한 명당 대기 (초)</label><input type="number" id="adb-delay" step="0.1" min="0" value="0.8"></div>
-        <div class="field"><label>입력 전 대기 (초)</label><input type="number" id="adb-pre" step="0.1" min="0" value="0.3"></div>
-        <div class="field"><label>&nbsp;</label><label class="chk"><input type="checkbox" id="adb-clear" checked> ② 입력 전 칸 비우기</label></div>
-        <div class="field"><label>&nbsp;</label><label class="chk"><input type="checkbox" id="adb-pause" checked> 시작 전 확인(아무 키나 누르기)</label></div>
-        <div class="field"><label>&nbsp;</label><label class="chk"><input type="checkbox" id="adb-hidekb"> 등록 후 키보드 닫기(뒤로)</label></div>
+      <h2>동작 순서</h2>
+      <div class="desc">한 명마다 위에서 아래로 실행됩니다. <b>시작 화면</b>(예: 카톡 친구 탭)에서 시작해서, 마지막에 다시 시작 화면으로 돌아오도록 짜면 됩니다. 기본 틀은 예시이니 앱 화면에 맞게 순서·좌표를 고치세요.</div>
+      <div class="row" style="margin-bottom:12px;">
+        <div class="field"><label>기본 틀 불러오기</label>
+          <select id="adb-preset">
+            <option value="">— 선택 —</option>
+            <option value="kakao">카카오톡: ID로 친구 추가 + 이름 변경</option>
+            <option value="line">라인: ID로 친구 추가 + 이름 변경</option>
+            <option value="idonly">아이디 입력칸 + 등록 버튼만</option>
+          </select></div>
+        <button class="btn" id="btn-step-add">+ 단계 추가</button>
+      </div>
+      <div id="step-list"></div>
+      <div class="row" style="margin-top:14px;">
+        <label class="chk"><input type="checkbox" id="adb-kb" checked> ADBKeyBoard 사용 (한글 이름 입력에 필요)</label>
+        <label class="chk"><input type="checkbox" id="adb-pause" checked> 폰마다 시작 전 확인 (아무 키나 누르기)</label>
+        <div class="field"><label>한 명 끝난 뒤 대기 (초)</label><input type="number" id="adb-delay" step="0.5" min="0" value="3"></div>
       </div>
       <div class="row" style="margin-top:14px;">
-        <button class="btn" id="btn-adb-test">🧪 테스트용 .bat (아이디 1개만)</button>
+        <button class="btn accent" id="btn-adb-test">🧪 1명 테스트 .bat 받기</button>
       </div>
       <div class="msg" id="adb-msg"></div>
     </div>
     <div class="card">
       <h2>폰별 시리얼 번호 (선택)</h2>
-      <div class="desc">여러 대를 한 PC에 동시에 꽂을 때만 필요합니다. 명령 프롬프트에서 <code>adb devices</code> 를 치면 나오는 값을 붙여넣으세요.</div>
+      <div class="desc">여러 대를 한 PC에 동시에 꽂을 때만 필요합니다. 명령 프롬프트에서 <code>adb devices</code> 를 치면 나오는 값을 붙여넣으세요. 한 대씩 바꿔 꽂으며 하면 비워 두세요.</div>
       <div class="adb-grid" id="serial-grid"></div>
     </div>
   </div>
@@ -280,7 +296,7 @@ let state = {
   data: {},           // artistName -> [{label, ids:[], done:[bool]}]
   serials: {},        // "artist|phoneIdx" -> serial
   cur: { key: null, idx: 0 },
-  adb: { inX:'', inY:'', btnX:'', btnY:'', submit:'tap', delay:0.8, pre:0.3, clear:true, pause:true, hidekb:false }
+  adb: { steps: null, kb: true, delay: 3, pause: true }
 };
 
 /* ---------- 저장 ---------- */
@@ -706,14 +722,103 @@ $('btn-xlsx-all').onclick = () => {
   XLSX.writeFile(wb, `영상통화_폰별분배표_${ds}.xlsx`);
 };
 
-/* ---------- ④ ADB ---------- */
-const adbFields = { inX: 'adb-in-x', inY: 'adb-in-y', btnX: 'adb-btn-x', btnY: 'adb-btn-y', submit: 'adb-submit', delay: 'adb-delay', pre: 'adb-pre', clear: 'adb-clear', pause: 'adb-pause', hidekb: 'adb-hidekb' };
-function renderAdb() {
-  Object.entries(adbFields).forEach(([k, id]) => { const el = $(id); if (el.type === 'checkbox') el.checked = !!state.adb[k]; else el.value = state.adb[k]; });
+/* ---------- ④ ADB 매크로 ---------- */
+const STEP_TYPES = {
+  tap:   '👆 화면 탭',
+  id:    '⌨ 아이디 입력',
+  name:  '⌨ 표시 이름 입력',
+  clear: '🧹 입력칸 비우기',
+  enter: '↵ 엔터(검색/완료)',
+  back:  '◀ 뒤로가기',
+  wait:  '⏱ 대기'
+};
+const T = (label, x = '', y = '') => ({ type: 'tap', label, x, y });
+const W = sec => ({ type: 'wait', sec });
+const PRESETS = {
+  kakao: [
+    T('친구 탭 상단 「친구 추가」 아이콘'), W(1),
+    T('「ID로 추가」 탭'), W(1),
+    T('ID 입력칸'), { type: 'clear' }, { type: 'id' }, { type: 'enter' }, W(2),
+    T('검색 결과의 「친구 추가」 버튼'), W(2),
+    T('추가된 친구 프로필 열기 / 이름 옆 편집(연필)'), W(1),
+    T('이름 입력칸'), { type: 'clear' }, { type: 'name' }, W(0.5),
+    T('「확인/저장」 버튼'), W(1),
+    { type: 'back' }, W(0.5), { type: 'back' }, W(0.5), { type: 'back' }
+  ],
+  line: [
+    T('홈 상단 「친구 추가」 아이콘'), W(1),
+    T('「검색」 메뉴'), W(1),
+    T('「ID」 선택'), T('ID 입력칸'), { type: 'clear' }, { type: 'id' }, { type: 'enter' }, W(2),
+    T('검색 결과의 「추가」 버튼'), W(2),
+    T('추가된 친구 프로필 → 이름 옆 편집(연필)'), W(1),
+    T('이름 입력칸'), { type: 'clear' }, { type: 'name' }, W(0.5),
+    T('「저장」 버튼'), W(1),
+    { type: 'back' }, W(0.5), { type: 'back' }, W(0.5), { type: 'back' }
+  ],
+  idonly: [T('아이디 입력칸'), W(0.3), { type: 'clear' }, { type: 'id' }, T('등록/추가 버튼')]
+};
+function ensureSteps() {
+  const a = state.adb;
+  if (!Array.isArray(a.steps) && a.inX === undefined) a.steps = JSON.parse(JSON.stringify(PRESETS.kakao));
+  if (!Array.isArray(a.steps)) {
+    // 예전 설정(입력칸/버튼 좌표) → 단계로 변환
+    a.steps = [T('아이디 입력칸', a.inX || '', a.inY || ''), W(+a.pre || 0.3), { type: 'clear' }, { type: 'id' }];
+    if (a.submit === 'enter' || a.submit === 'both') a.steps.push({ type: 'enter' });
+    if (a.submit !== 'enter') a.steps.push(T('등록/추가 버튼', a.btnX || '', a.btnY || ''));
+    if (a.hidekb) a.steps.push({ type: 'back' });
+    a.delay = Math.max(+a.delay || 0, 3);
+  }
+  if (a.kb === undefined) a.kb = true;
 }
-Object.entries(adbFields).forEach(([k, id]) => $(id).onchange = () => {
-  const el = $(id); state.adb[k] = el.type === 'checkbox' ? el.checked : el.value; save();
-});
+function renderAdb() {
+  ensureSteps();
+  $('adb-kb').checked = !!state.adb.kb; $('adb-pause').checked = !!state.adb.pause; $('adb-delay').value = state.adb.delay;
+  renderSteps();
+}
+function renderSteps() {
+  const st = state.adb.steps;
+  $('step-list').innerHTML = st.length ? st.map((s, i) => `<div class="step-row" data-i="${i}">
+      <span class="step-n">${i + 1}</span>
+      <select data-f="type">${Object.entries(STEP_TYPES).map(([k, v]) => `<option value="${k}" ${k === s.type ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      ${s.type === 'tap' ? `<input type="text" data-f="label" value="${esc(s.label || '')}" placeholder="어디를 누르는지 메모" class="step-label">
+        <input type="number" data-f="x" value="${esc(s.x ?? '')}" placeholder="X" class="${s.x === '' || s.x == null ? 'need' : ''}">
+        <input type="number" data-f="y" value="${esc(s.y ?? '')}" placeholder="Y" class="${s.y === '' || s.y == null ? 'need' : ''}">` : ''}
+      ${s.type === 'wait' ? `<input type="number" data-f="sec" step="0.5" min="0" value="${esc(s.sec ?? 1)}"> <span class="step-hint">초</span>` : ''}
+      ${s.type === 'id' ? '<span class="step-hint">당첨자 아이디</span>' : ''}
+      ${s.type === 'name' ? '<span class="step-hint">표시 이름 (예: 01_김민지) — ADBKeyBoard 필요</span>' : ''}
+      ${s.type === 'clear' ? '<span class="step-hint">커서가 있는 칸의 글자를 모두 지움</span>' : ''}
+      <span class="step-btns"><button class="btn small" data-act="up">↑</button><button class="btn small" data-act="down">↓</button><button class="btn small danger" data-act="del">✕</button></span>
+    </div>`).join('') : '<div class="empty" style="padding:14px">단계가 없습니다. 기본 틀을 불러오거나 단계를 추가하세요.</div>';
+  $('step-list').querySelectorAll('.step-row').forEach(row => {
+    const i = +row.dataset.i;
+    row.querySelectorAll('[data-f]').forEach(el => el.onchange = () => {
+      const f = el.dataset.f, step = state.adb.steps[i];
+      if (f === 'type') { state.adb.steps[i] = el.value === 'tap' ? T('', '', '') : el.value === 'wait' ? W(1) : { type: el.value }; save(); renderSteps(); return; }
+      step[f] = (f === 'x' || f === 'y' || f === 'sec') ? (el.value === '' ? '' : +el.value) : el.value;
+      if (f === 'x' || f === 'y') el.classList.toggle('need', el.value === '');
+      save();
+    });
+    row.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+      const st = state.adb.steps, act = b.dataset.act;
+      if (act === 'del') st.splice(i, 1);
+      if (act === 'up' && i > 0) [st[i - 1], st[i]] = [st[i], st[i - 1]];
+      if (act === 'down' && i < st.length - 1) [st[i + 1], st[i]] = [st[i], st[i + 1]];
+      save(); renderSteps();
+    });
+  });
+}
+$('adb-preset').onchange = e => {
+  const k = e.target.value; if (!k) return;
+  if (state.adb.steps.length && !confirm('지금 동작 순서를 기본 틀로 바꿀까요? (적어 둔 좌표가 지워집니다)')) { e.target.value = ''; return; }
+  state.adb.steps = JSON.parse(JSON.stringify(PRESETS[k]));
+  if (k !== 'idonly') state.adb.kb = true;
+  e.target.value = ''; save(); renderAdb(); toast('기본 틀을 불러왔습니다. 좌표를 채워 주세요');
+};
+$('btn-step-add').onclick = () => { state.adb.steps.push(T('', '', '')); save(); renderSteps(); };
+$('adb-kb').onchange = () => { state.adb.kb = $('adb-kb').checked; save(); };
+$('adb-pause').onchange = () => { state.adb.pause = $('adb-pause').checked; save(); };
+$('adb-delay').onchange = () => { state.adb.delay = +$('adb-delay').value || 0; save(); };
+
 function renderSerials() {
   const ps = allPhones();
   const g = $('serial-grid');
@@ -723,74 +828,94 @@ function renderSerials() {
 }
 
 function adbProblems() {
-  const a = state.adb, p = [];
-  if (a.inX === '' || a.inY === '') p.push('아이디 입력칸 좌표');
-  if ((a.submit === 'tap' || a.submit === 'both') && (a.btnX === '' || a.btnY === '')) p.push('등록 버튼 좌표');
+  ensureSteps();
+  const st = state.adb.steps, p = [];
+  if (!st.length) p.push('동작 순서가 비어 있음');
+  st.forEach((s, i) => { if (s.type === 'tap' && (s.x === '' || s.y === '' || s.x == null || s.y == null)) p.push(`${i + 1}번 단계(${s.label || '화면 탭'}) 좌표`); });
+  if (!st.some(s => s.type === 'id')) p.push('「아이디 입력」 단계');
+  if (st.some(s => s.type === 'name') && !state.adb.kb) p.push('한글 이름 입력에는 「ADBKeyBoard 사용」 체크');
   return p;
 }
-/* adb shell input text 용 이스케이프 (기기 쉘 + 공백) */
-function adbText(id) {
-  // 기기 쪽 sh 에서 작은따옴표로 감싸므로 ' 만 처리, 공백은 %s
-  return id.replace(/'/g, `'\\''`).replace(/ /g, '%s');
+const ADBKB = 'com.android.adbkeyboard/.AdbIME';
+function b64utf8(t) { return btoa(unescape(encodeURIComponent(t))); }
+/* 기기 쉘에서 글자 입력하는 명령 */
+function typeCmd(text) {
+  if (state.adb.kb) return `am broadcast -a ADB_INPUT_B64 --es msg ${b64utf8(text)} >/dev/null`;
+  return `input text '${text.replace(/'/g, `'\\''`).replace(/ /g, '%s')}'`;
 }
-/* .bat 안에서 % 는 %% 로 */
-function batSafe(s) { return s.replace(/%/g, '%%'); }
+function clearCmd() {
+  return state.adb.kb ? 'am broadcast -a ADB_CLEAR_TEXT >/dev/null' : `input keyevent 123; input keyevent ${Array(40).fill(67).join(' ')}`;
+}
+/* .bat 안에서 % 는 %% 로, echo 용 특수문자 이스케이프 */
+function batSafe(s) { return String(s).replace(/%/g, '%%'); }
+function batEcho(s) { return batSafe(s).replace(/[&|<>^"()]/g, '^$&'); }
 
-function phoneBlock(ph, idsOverride) {
+function phoneBlock(ph, onlyFirst) {
   const a = state.adb;
   const ser = state.serials[ph.artist + '|' + ph.idx];
   const dev = ser ? ` -s ${ser}` : '';
-  const ids = idsOverride || ph.phone.ids.filter((_, i) => !ph.phone.done[i]);
+  let idx = ph.phone.ids.map((_, i) => i).filter(i => !ph.phone.done[i]);
+  if (onlyFirst) idx = idx.slice(0, 1).length ? idx.slice(0, 1) : [0];
   const skipped = [];
   const L = [];
   const title = `${ph.artist} ${ph.phone.label}`;
-  L.push(`echo.`);
-  L.push(`echo ==================================================`);
-  L.push(`echo   ${batSafe(title).replace(/[&|<>^]/g, '^$&')}  -  ${ids.length}명 자동입력`);
-  L.push(`echo ==================================================`);
-  L.push(`adb${dev} get-state >nul 2>&1 || (echo [오류] 폰이 연결되지 않았습니다 ${ser || ''} - USB 디버깅을 확인하세요. & pause & goto :eof)`);
-  if (a.pause) { L.push(`echo 영상통화 앱의 당첨자 등록 화면을 띄운 뒤 아무 키나 누르세요...`); L.push(`pause >nul`); }
-  ids.forEach((id, n) => {
-    if (/[^\x21-\x7E ]/.test(id) || /["]/.test(id)) { skipped.push(id); return; }
+  L.push('echo.', 'echo ==================================================');
+  L.push(`echo   ${batEcho(title)}  -  ${idx.length}명 자동입력`);
+  L.push('echo ==================================================');
+  L.push(`adb${dev} get-state >nul 2>&1 || (echo [오류] 폰이 연결되지 않았습니다 ${batEcho(ser || '')} - USB 디버깅을 확인하세요. & pause & goto :eof)`);
+  if (a.kb) {
+    L.push(`adb${dev} shell pm list packages com.android.adbkeyboard | find "adbkeyboard" >nul || (echo [오류] 폰에 ADBKeyBoard 가 설치되지 않았습니다. adb install ADBKeyboard.apk 를 먼저 실행하세요. & pause & goto :eof)`);
+    L.push(`adb${dev} shell "ime enable ${ADBKB} >/dev/null; ime set ${ADBKB} >/dev/null"`);
+  }
+  if (a.pause) { L.push('echo 카카오톡/라인의 시작 화면을 띄운 뒤 아무 키나 누르세요... (중간에 멈추려면 Ctrl+C)'); L.push('pause >nul'); }
+  idx.forEach((k, n) => {
+    const id = ph.phone.ids[k], nm = displayName(ph.artist, ph.phone, k);
+    if (!a.kb && /[^\x21-\x7E]/.test(id)) { skipped.push(id); return; }
     const cmds = [];
-    cmds.push(`input tap ${+a.inX} ${+a.inY}`);
-    if (+a.pre > 0) cmds.push(`sleep ${+a.pre}`);
-    if (a.clear) cmds.push(`input keyevent 123`, `input keyevent ${Array(40).fill(67).join(' ')}`);
-    cmds.push(`input text '${adbText(id)}'`);
-    if (a.submit === 'enter' || a.submit === 'both') cmds.push(`input keyevent 66`);
-    if (a.submit === 'tap' || a.submit === 'both') { if (a.submit === 'both') cmds.push('sleep 0.2'); cmds.push(`input tap ${+a.btnX} ${+a.btnY}`); }
-    if (a.hidekb) cmds.push(`input keyevent 4`);
+    a.steps.forEach(s => {
+      if (s.type === 'tap') cmds.push(`input tap ${+s.x} ${+s.y}`);
+      else if (s.type === 'wait') { if (+s.sec > 0) cmds.push(`sleep ${+s.sec}`); }
+      else if (s.type === 'id') cmds.push(typeCmd(id));
+      else if (s.type === 'name') cmds.push(typeCmd(nm));
+      else if (s.type === 'clear') cmds.push(clearCmd());
+      else if (s.type === 'enter') cmds.push('input keyevent 66');
+      else if (s.type === 'back') cmds.push('input keyevent 4');
+    });
     if (+a.delay > 0) cmds.push(`sleep ${+a.delay}`);
-    L.push(`echo [${n + 1}/${ids.length}] ${batSafe(id).replace(/[&|<>^]/g, '^$&')}`);
+    L.push(`echo [${n + 1}/${idx.length}] ${batEcho(id)}  -^>  ${batEcho(nm)}`);
     L.push(`adb${dev} shell "${batSafe(cmds.join('; '))}"`);
   });
+  if (a.kb) L.push(`adb${dev} shell "ime reset >/dev/null"`);
   if (skipped.length) {
-    L.push(`echo.`);
-    L.push(`echo [주의] 아래 아이디는 한글/특수문자라 자동입력하지 못했습니다. 직접 입력하세요:`);
-    skipped.forEach(s => L.push(`echo    - ${batSafe(s).replace(/[&|<>^"]/g, '^$&')}`));
+    L.push('echo.', 'echo [주의] 아래 아이디는 한글/특수문자라 자동입력하지 못했습니다. 직접 입력하세요:');
+    skipped.forEach(s => L.push(`echo    - ${batEcho(s)}`));
   }
-  L.push(`echo ${batSafe(title).replace(/[&|<>^]/g, '^$&')} 완료!`);
-  return { lines: L, skipped };
+  L.push(`echo ${batEcho(title)} 완료!`);
+  return { lines: L, skipped, count: idx.length };
 }
 
 function downloadBat(phones, testOnly) {
   const prob = adbProblems();
-  if (prob.length) { toast('④ 자동입력 설정에서 좌표를 먼저 입력하세요'); switchTab('adb'); $('adb-msg').innerHTML = `<span class="err">입력 필요: ${prob.join(', ')}</span>`; return; }
-  const L = ['@echo off', 'chcp 65001 >nul', 'cd /d "%~dp0"', 'if exist adb.exe set "PATH=%~dp0;%PATH%"', 'where adb >nul 2>&1 || (echo [오류] adb 를 찾을 수 없습니다. 이 파일을 platform-tools 폴더 안에 넣고 실행하세요. & pause & exit /b)', 'adb start-server >nul 2>&1', 'call :main', 'echo.', 'echo 모든 작업이 끝났습니다. 앱 화면에서 등록 결과를 꼭 확인하세요.', 'pause', 'exit /b', '', ':main'];
+  if (prob.length) {
+    toast('④ 자동입력 설정을 먼저 채워 주세요'); switchTab('adb');
+    $('adb-msg').innerHTML = `<span class="err">입력 필요: ${prob.map(esc).join(', ')}</span>`; return;
+  }
+  $('adb-msg').innerHTML = '';
+  const L = ['@echo off', 'chcp 65001 >nul', 'cd /d "%~dp0"', 'if exist adb.exe set "PATH=%~dp0;%PATH%"',
+    'where adb >nul 2>&1 || (echo [오류] adb 를 찾을 수 없습니다. 이 파일을 platform-tools 폴더 안에 넣고 실행하세요. & pause & exit /b)',
+    'adb start-server >nul 2>&1', 'call :main', 'echo.', 'echo 모든 작업이 끝났습니다. 앱에서 친구 목록과 이름을 꼭 확인하세요.', 'pause', 'exit /b', '', ':main'];
   let total = 0, skippedAll = 0;
   phones.forEach((ph, k) => {
-    const ids = testOnly ? [ph.phone.ids[0]] : null;
-    const b = phoneBlock(ph, ids);
-    total += (ids || ph.phone.ids.filter((_, i) => !ph.phone.done[i])).length; skippedAll += b.skipped.length;
-    if (k > 0 && !state.serials[ph.artist + '|' + ph.idx]) { L.push('echo.', 'echo 다음 폰으로 바꿔 꽂고 아무 키나 누르세요...', 'pause >nul'); }
+    const b = phoneBlock(ph, testOnly);
+    total += b.count - b.skipped.length; skippedAll += b.skipped.length;
+    if (k > 0 && !state.serials[ph.artist + '|' + ph.idx]) L.push('echo.', `echo 다음 폰^(${batEcho(ph.artist + ' ' + ph.phone.label)}^)으로 바꿔 꽂고 아무 키나 누르세요...`, 'pause >nul');
     L.push(...b.lines);
   });
   L.push('goto :eof');
-  const bat = L.join('\r\n') + '\r\n';
-  const blob = new Blob([bat], { type: 'application/octet-stream' });
+  const blob = new Blob([L.join('\r\n') + '\r\n'], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const aEl = document.createElement('a');
-  const name = testOnly ? '테스트_자동입력.bat' : phones.length === 1 ? `자동입력_${phones[0].artist}_${phones[0].phone.label}.bat` : '자동입력_전체폰.bat';
+  const name = testOnly ? `1명테스트_${phones[0].artist}_${phones[0].phone.label}.bat` : phones.length === 1 ? `자동입력_${phones[0].artist}_${phones[0].phone.label}.bat` : '자동입력_전체폰.bat';
   aEl.href = url; aEl.download = name.replace(/[\\\/:*?"<>|]/g, '_'); document.body.appendChild(aEl); aEl.click(); aEl.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
   toast(`${name} 저장 — ${total}명${skippedAll ? ` (수동 ${skippedAll}명)` : ''}`);
@@ -802,7 +927,8 @@ $('btn-bat-all').onclick = () => {
 };
 $('btn-adb-test').onclick = () => {
   const ps = allPhones().filter(p => p.phone.ids.length);
-  const ph = getPhone(state.cur.key) || ps[0];
+  const cur = getPhone(state.cur.key);
+  const ph = cur && cur.phone.ids.length ? cur : ps[0];
   if (!ph) { toast('당첨자를 먼저 불러오세요'); return; }
   downloadBat([ph], true);
 };
