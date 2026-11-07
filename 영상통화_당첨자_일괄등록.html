@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영상통화 당첨자 일괄등록</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a; --bg2: #111; --bg3: #1a1a1a; --bg4: #222;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.15);
+    --text: #f0f0f0; --text2: #999; --text3: #666;
+    --accent: #e8ff47; --danger: #ff5c5c; --success: #47ff8a; --warn: #ffb547;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 16px 80px; }
+  header { max-width: 1100px; margin: 0 auto 24px; padding: 32px 16px 16px; border-bottom: 0.5px solid var(--border2); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+  .logo-title { font-family: 'Bebas Neue', sans-serif; font-size: 40px; letter-spacing: 2px; color: var(--accent); line-height: 1; }
+  .logo-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+  .hstats { display: flex; gap: 20px; }
+  .hstat { text-align: right; }
+  .hstat-val { font-size: 26px; font-weight: 700; line-height: 1; }
+  .hstat-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: var(--bg2); border-radius: var(--radius); padding: 4px; border: 0.5px solid var(--border); width: fit-content; max-width: 100%; overflow-x: auto; }
+  .tab { padding: 9px 20px; border-radius: 9px; font-size: 14px; cursor: pointer; color: var(--text2); border: none; background: transparent; font-family: inherit; white-space: nowrap; }
+  .tab.active { background: var(--accent); color: #000; font-weight: 700; }
+  .panel { display: none; } .panel.active { display: block; }
+
+  .card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .card .desc { font-size: 12px; color: var(--text2); margin-bottom: 14px; line-height: 1.6; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--text2); }
+  input[type=text], input[type=number], textarea, select {
+    background: var(--bg3); border: 0.5px solid var(--border2); color: var(--text); border-radius: var(--radius-sm);
+    padding: 9px 12px; font-size: 14px; font-family: inherit; outline: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  input[type=number] { width: 90px; }
+  textarea { width: 100%; min-height: 180px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 13px; line-height: 1.5; }
+  .btn { padding: 9px 16px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; border: 0.5px solid var(--border2); background: var(--bg3); color: var(--text); font-family: inherit; white-space: nowrap; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.accent { background: var(--accent); color: #000; font-weight: 700; border-color: var(--accent); }
+  .btn.danger { color: var(--danger); border-color: rgba(255,92,92,0.4); }
+  .btn.small { padding: 5px 10px; font-size: 12px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .artist-inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 12px; }
+  .upload-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 22px; text-align: center; cursor: pointer; margin-bottom: 12px; }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: rgba(232,255,71,0.04); }
+  .upload-title { font-size: 14px; font-weight: 500; }
+  .upload-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  .msg { font-size: 13px; margin-top: 10px; line-height: 1.7; }
+  .msg .ok { color: var(--success); } .msg .warn { color: var(--warn); } .msg .err { color: var(--danger); }
+
+  /* 분배 현황 */
+  .artist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .artist-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .artist-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .artist-name { font-size: 16px; font-weight: 700; }
+  .artist-count { font-size: 12px; color: var(--text2); }
+  .phone-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg3); border-radius: var(--radius-sm); margin-bottom: 6px; cursor: pointer; border: 0.5px solid transparent; }
+  .phone-row:hover { border-color: var(--accent); }
+  .phone-label { font-weight: 700; font-size: 14px; min-width: 52px; }
+  .phone-bar { flex: 1; height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
+  .phone-bar > div { height: 100%; background: var(--success); }
+  .phone-stat { font-size: 12px; color: var(--text2); min-width: 92px; text-align: right; }
+  .phone-row.complete .phone-label { color: var(--success); }
+  .empty { color: var(--text3); font-size: 13px; padding: 30px; text-align: center; }
+
+  /* 등록 모드 */
+  .reg-top { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .reg-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+  @media (max-width: 800px) { .reg-layout { grid-template-columns: 1fr; } header { padding-top: 20px; } .logo-title { font-size: 32px; } }
+  .big-card { background: var(--bg2); border: 1px solid var(--accent); border-radius: var(--radius); padding: 28px 20px; text-align: center; }
+  .big-pos { font-size: 13px; color: var(--text2); margin-bottom: 10px; }
+  .big-id { font-size: 46px; font-weight: 700; letter-spacing: 1px; word-break: break-all; font-family: ui-monospace, Consolas, monospace; color: var(--accent); cursor: pointer; user-select: all; }
+  .big-name-wrap { margin-top: 18px; padding-top: 16px; border-top: 0.5px dashed var(--border2); }
+  .big-name-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .big-name { font-size: 30px; font-weight: 700; color: #fff; word-break: break-all; cursor: pointer; }
+  .big-step { display: inline-flex; gap: 6px; margin-top: 14px; font-size: 12px; }
+  .big-step span { padding: 3px 10px; border-radius: 999px; background: var(--bg4); color: var(--text3); }
+  .big-step span.on { background: var(--accent); color: #000; font-weight: 700; }
+  .big-step span.ok { background: rgba(71,255,138,0.15); color: var(--success); }
+  .big-id.dim, .big-name.dim { opacity: .45; }
+  .id-item .nm { color: var(--text2); font-size: 13px; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .big-next { font-size: 14px; color: var(--text3); margin-top: 10px; font-family: ui-monospace, Consolas, monospace; }
+  .big-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+  .big-actions .btn { padding: 14px 22px; font-size: 15px; }
+  .hint { font-size: 12px; color: var(--text3); margin-top: 14px; line-height: 1.7; }
+  kbd { background: var(--bg4); border: 0.5px solid var(--border2); border-radius: 4px; padding: 1px 6px; font-size: 11px; font-family: inherit; }
+  .id-list { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); max-height: 520px; overflow-y: auto; }
+  .id-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 0.5px solid var(--border); font-size: 14px; cursor: pointer; }
+  .id-item:last-child { border-bottom: none; }
+  .id-item .n { color: var(--text3); font-size: 12px; min-width: 22px; }
+  .id-item .v { flex: 1; font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+  .id-item .ck { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+  .id-item.done .v { color: var(--text3); text-decoration: line-through; }
+  .id-item.done .ck { background: var(--success); color: #000; border-color: var(--success); }
+  .id-item.current { background: rgba(232,255,71,0.08); }
+  .id-item.current .v { color: var(--accent); font-weight: 700; }
+  .flag { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: rgba(255,181,71,0.15); color: var(--warn); }
+
+  .adb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .adb-grid .field input[type=number] { width: 100%; }
+  .xy { display: flex; gap: 6px; } .xy input { width: 50% !important; }
+  .steps { font-size: 13px; color: var(--text2); line-height: 1.9; padding-left: 18px; }
+  .steps code, .desc code { background: var(--bg4); padding: 1px 6px; border-radius: 4px; color: var(--accent); font-size: 12px; }
+  label.chk { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text); cursor: pointer; }
+
+  .step-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 10px; background: var(--bg3); border-radius: var(--radius-sm); margin-bottom: 6px; }
+  .step-row select { min-width: 160px; }
+  .step-row input[type=number] { width: 80px; }
+  .step-row input.need { border-color: var(--warn); }
+  .step-label { flex: 1; min-width: 160px; }
+  .step-n { color: var(--text3); font-size: 12px; min-width: 20px; }
+  .step-hint { font-size: 12px; color: var(--text2); flex: 1; }
+  .step-btns { display: flex; gap: 4px; margin-left: auto; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--accent); color: #000; padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: 700; opacity: 0; transition: all .2s; pointer-events: none; z-index: 99; max-width: calc(100% - 32px); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo-title">VIDEO CALL WINNERS</div>
+    <div class="logo-sub">영상통화 당첨자 아이디 일괄 분배 · 빠른 등록 · 자동입력</div>
+  </div>
+  <div class="hstats">
+    <div class="hstat"><div class="hstat-val" id="h-total">0</div><div class="hstat-label">전체 당첨자</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-phones">0</div><div class="hstat-label">핸드폰</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-done" style="color:var(--success)">0</div><div class="hstat-label">등록 완료</div></div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-tab="load">① 당첨자 불러오기</button>
+    <button class="tab" data-tab="board">② 폰별 분배 현황</button>
+    <button class="tab" data-tab="reg">③ 등록하기</button>
+    <button class="tab" data-tab="adb">④ 자동입력 매크로</button>
+  </div>
+
+  <!-- ① 불러오기 -->
+  <div class="panel active" id="tab-load">
+    <div class="card">
+      <h2>기본 설정</h2>
+      <div class="desc">아티스트 수, 아티스트당 핸드폰 수, 폰 1대당 등록 인원을 정하세요. 인원이 넘치면 폰이 자동으로 추가됩니다.</div>
+      <div class="row">
+        <div class="field"><label>아티스트 수</label><input type="number" id="cfg-artists" min="1" max="50" value="5"></div>
+        <div class="field"><label>아티스트당 폰</label><input type="number" id="cfg-phones" min="1" max="20" value="2"></div>
+        <div class="field"><label>폰당 인원</label><input type="number" id="cfg-per" min="1" max="500" value="30"></div>
+      </div>
+      <div class="row" style="margin-top:14px;">
+        <div class="field" style="flex:1;min-width:260px"><label>카톡·라인에 표시될 이름 형식 — 쓸 수 있는 칸: <code>{번호}</code> <code>{이름}</code> <code>{아이디}</code> <code>{아티스트}</code> <code>{폰}</code></label><input type="text" id="cfg-tpl" value="{번호}_{이름}" placeholder="{번호}_{이름}"></div>
+        <div class="field"><label>미리보기</label><div id="tpl-preview" style="padding:9px 0;font-size:14px;color:var(--accent)"></div></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <label class="chk"><input type="checkbox" id="cfg-twostep" checked> 등록할 때 <b>아이디 → 표시 이름</b> 순서로 두 번 복사 (친구 추가 후 이름 바꾸기용)</label>
+      </div>
+      <div class="artist-inputs" id="artist-inputs"></div>
+    </div>
+
+    <div class="card">
+      <h2>당첨자 아이디 넣기</h2>
+      <div class="desc">
+        <b>방법 A — 엑셀 업로드:</b> <code>아티스트</code>(또는 멤버) 열과 <code>아이디</code>(또는 ID) 열, <code>이름</code>(또는 성명·닉네임) 열이 있으면 자동 인식합니다. <code>폰</code> 열이 있으면 그 번호대로, 없으면 순서대로 30명씩 나눕니다. 시트가 여러 개면 시트 이름을 아티스트로 씁니다.<br>
+        <b>방법 B — 붙여넣기:</b> 엑셀에서 <code>아티스트 | 아이디 | 이름</code> 열을 복사해 그대로 붙여넣거나, 한 줄에 <code>아이디 이름</code>(띄어쓰기로 구분)만 붙여넣고 아래에서 아티스트를 고르세요. 이름이 없으면 아이디만 넣어도 됩니다.
+      </div>
+      <div class="upload-zone" id="upload-zone">
+        <div class="upload-title">📂 엑셀 파일 끌어다 놓기 / 클릭해서 선택</div>
+        <div class="upload-sub">.xlsx · .xls · .csv (추첨 프로그램에서 받은 당첨자 엑셀도 가능)</div>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none">
+      <textarea id="paste-box" placeholder="예시 1) 아이디 이름 (한 줄에 한 명)&#10;user_abc 김민지&#10;fan1234 이서준&#10;&#10;예시 2) 엑셀에서 세 열 복사 (아티스트 / 아이디 / 이름)&#10;아티스트A	user_abc	김민지&#10;아티스트B	star_99	박지우"></textarea>
+      <div class="row" style="margin-top:12px;">
+        <div class="field"><label>아이디만 붙여넣었다면 → 아티스트</label><select id="paste-artist"></select></div>
+        <div class="field"><label>기존 데이터</label>
+          <select id="paste-mode"><option value="replace">해당 아티스트 교체</option><option value="append">뒤에 추가</option></select>
+        </div>
+        <button class="btn accent" id="btn-paste">⚡ 분배하기</button>
+        <button class="btn danger" id="btn-reset">전체 초기화</button>
+      </div>
+      <div class="msg" id="load-msg"></div>
+    </div>
+  </div>
+
+  <!-- ② 현황 -->
+  <div class="panel" id="tab-board">
+    <div class="row" style="margin-bottom:14px;">
+      <button class="btn accent" id="btn-xlsx-all">📥 폰별 분배표 엑셀</button>
+      <button class="btn" id="btn-bat-all">🤖 전체 폰 자동입력 파일(.bat) 받기</button>
+      <button class="btn" id="btn-reset-done">완료 체크 모두 해제</button>
+    </div>
+    <div class="artist-grid" id="artist-grid"></div>
+  </div>
+
+  <!-- ③ 등록 -->
+  <div class="panel" id="tab-reg">
+    <div class="reg-top">
+      <select id="reg-phone" style="min-width:220px;"></select>
+      <button class="btn" id="btn-prev-phone">◀ 이전 폰</button>
+      <button class="btn" id="btn-next-phone">다음 폰 ▶</button>
+      <button class="btn" id="btn-copy-all">📋 이 폰 전체 복사</button>
+      <button class="btn" id="btn-bat-one">🤖 이 폰 자동입력(.bat)</button>
+    </div>
+    <div class="reg-layout">
+      <div>
+        <div class="big-card">
+          <div class="big-pos" id="big-pos">-</div>
+          <div class="big-name-label">아이디 (친구 추가 검색용)</div>
+          <div class="big-id" id="big-id" title="클릭하면 복사">-</div>
+          <div class="big-name-wrap" id="big-name-wrap">
+            <div class="big-name-label">카톡·라인에 표시될 이름</div>
+            <div class="big-name" id="big-name" title="클릭하면 복사">-</div>
+          </div>
+          <div class="big-step" id="big-step"></div>
+          <div class="big-next" id="big-next"></div>
+          <div class="big-actions">
+            <button class="btn" id="btn-back">◀ 이전</button>
+            <button class="btn accent" id="btn-copy-next">📋 복사하고 다음 (Space)</button>
+            <button class="btn" id="btn-skip">건너뛰기 ▶</button>
+          </div>
+          <div class="hint">
+<kbd>Space</kbd>/<kbd>Enter</kbd> ① 아이디 복사 → 카톡·라인에서 친구 검색·추가 → <kbd>Space</kbd> ② 표시 이름 복사 → 친구 이름 변경에 붙여넣기 → 자동으로 다음 사람<br>
+            <kbd>←</kbd> 이전 · <kbd>→</kbd> 건너뛰기 · <kbd>[</kbd> <kbd>]</kbd> 폰 이동 · 아이디/이름 글자를 클릭해도 복사됩니다.<br>
+            💻 <b>PC 카카오톡·PC 라인</b>에 그 폰의 계정으로 로그인해서 추가하면, 친구 목록과 바꾼 이름이 폰에도 그대로 반영돼 가장 빠릅니다.<br>
+            📱 폰에서 직접 넣는다면: 이 파일을 폰으로 보내 폰 브라우저로 열고 같은 목록을 붙여넣은 뒤, 이 화면에서 <b>탭 → 앱에서 붙여넣기</b>를 반복하세요.<br>
+            🤖 안드로이드라면 <b>④ 자동입력 매크로</b>로 친구 추가와 이름 변경까지 자동으로 할 수 있습니다.
+          </div>
+        </div>
+      </div>
+      <div class="id-list" id="id-list"></div>
+    </div>
+  </div>
+
+  <!-- ④ ADB -->
+  <div class="panel" id="tab-adb">
+    <div class="card">
+      <h2>자동입력 매크로 (안드로이드 + PC)</h2>
+      <div class="desc">PC에 USB로 연결한 안드로이드 폰에서 <b>친구 추가 → 아이디 입력 → 추가 → 이름 변경</b>을 한 명씩 자동으로 반복합니다. 동작 순서는 아래에서 직접 짤 수 있어서 카카오톡·라인 모두 쓸 수 있어요. (아이폰은 안 됩니다)</div>
+      <ol class="steps">
+        <li><b>PC (처음 한 번):</b> <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" style="color:var(--accent)">Android Platform-Tools</a>를 받아 압축을 풀고, 이 도구에서 받은 <code>.bat</code> 파일을 그 폴더(adb.exe가 있는 곳)에 넣습니다.</li>
+        <li><b>갤럭시 (처음 한 번):</b> <code>설정 → 휴대전화 정보 → 소프트웨어 정보 → 빌드번호</code>를 7번 탭 → <code>설정 → 개발자 옵션</code>에서 <code>USB 디버깅</code>과 <code>포인터 위치</code>를 켭니다. USB를 꽂으면 폰에 뜨는 「USB 디버깅을 허용하시겠습니까?」에서 「이 컴퓨터에서 항상 허용」을 체크하고 허용하세요.</li>
+        <li><b>한글 이름까지 넣으려면 (처음 한 번):</b> <a href="https://github.com/senzhk/ADBKeyBoard/releases" target="_blank" style="color:var(--accent)">ADBKeyBoard</a>의 <code>ADBKeyboard.apk</code>를 받아 platform-tools 폴더에 넣고, 명령 프롬프트에서 <code>adb install ADBKeyboard.apk</code> 를 실행합니다. 매크로가 시작할 때 이 키보드로 바꾸고, 끝나면 원래 키보드로 돌려놓습니다.</li>
+        <li><b>좌표 적기:</b> 포인터 위치가 켜져 있으면 화면을 누를 때 맨 위에 <code>X: 540 Y: 1200</code> 처럼 좌표가 보입니다. 앱에서 실제로 한 명을 손으로 추가해 보면서, 누르는 곳마다 좌표를 아래 단계에 적으세요. 같은 기종이면 한 번만 적으면 됩니다.</li>
+        <li>먼저 <b>🧪 1명 테스트</b>로 확인하고, 잘 되면 폰 전체(30명) 파일을 받아 실행하세요.</li>
+      </ol>
+      <div class="msg"><span class="warn">⚠ 카카오·라인은 약관에서 자동화 프로그램 사용을 금지하고 있고, 짧은 시간에 아이디 검색을 많이 하면 검색 제한이나 계정 제재를 받을 수 있습니다. 한 명당 대기 시간을 넉넉히, 그리고 4·6·5초처럼 섞어서 두고, 처음에는 적은 인원으로 시험해 보세요.</span></div>
+    </div>
+
+    <div class="card">
+      <h2>동작 순서</h2>
+      <div class="desc">한 명마다 위에서 아래로 실행됩니다. <b>시작 화면</b>(예: 카톡 친구 탭)에서 시작해서, 마지막에 다시 시작 화면으로 돌아오도록 짜면 됩니다. 기본 틀은 예시이니 앱 화면에 맞게 순서·좌표를 고치세요.</div>
+      <div class="row" style="margin-bottom:12px;">
+        <div class="field"><label>기본 틀 불러오기</label>
+          <select id="adb-preset">
+            <option value="">— 선택 —</option>
+            <option value="kakao">카카오톡: ID로 친구 추가 + 이름 변경</option>
+            <option value="line">라인: ID로 친구 추가 + 이름 변경</option>
+            <option value="idonly">아이디 입력칸 + 등록 버튼만</option>
+          </select></div>
+        <button class="btn" id="btn-step-add">+ 단계 추가</button>
+      </div>
+      <div id="step-list"></div>
+      <div class="row" style="margin-top:14px;">
+        <label class="chk"><input type="checkbox" id="adb-kb" checked> ADBKeyBoard 사용 (한글 이름 입력에 필요)</label>
+        <label class="chk"><input type="checkbox" id="adb-pause" checked> 폰마다 시작 전 확인 (아무 키나 누르기)</label>
+      </div>
+      <div class="row" style="margin-top:14px;">
+        <div class="field"><label>한 명 끝난 뒤 대기 (초) — 쉼표로 여러 개</label><input type="text" id="adb-delay" value="4,6,5" style="width:160px" placeholder="4,6,5"></div>
+        <div class="field"><label>대기 시간 바꾸는 방식</label>
+          <select id="adb-delay-mode"><option value="random">무작위로 섞기 (같은 값 연속 없음)</option><option value="cycle">입력한 순서대로 반복 (4→6→5→4…)</option></select></div>
+        <div class="field"><label>&nbsp;</label><div id="adb-estimate" style="padding:9px 0;font-size:13px;color:var(--text2)"></div></div>
+      </div>
+      <div class="row" style="margin-top:14px;">
+        <button class="btn accent" id="btn-adb-test">🧪 1명 테스트 .bat 받기</button>
+      </div>
+      <div class="msg" id="adb-msg"></div>
+    </div>
+    <div class="card">
+      <h2>폰별 시리얼 번호 (선택)</h2>
+      <div class="desc">여러 대를 한 PC에 동시에 꽂을 때만 필요합니다. 명령 프롬프트에서 <code>adb devices</code> 를 치면 나오는 값을 붙여넣으세요. 한 대씩 바꿔 꽂으며 하면 비워 두세요.</div>
+      <div class="adb-grid" id="serial-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY = 'vc-winner-register-v1';
+let state = {
+  cfg: { artists: 5, phones: 2, per: 30, tpl: '{번호}_{이름}', twoStep: true },
+  artistNames: ['아티스트1','아티스트2','아티스트3','아티스트4','아티스트5'],
+  data: {},           // artistName -> [{label, ids:[], done:[bool]}]
+  serials: {},        // "artist|phoneIdx" -> serial
+  cur: { key: null, idx: 0 },
+  adb: { steps: null, kb: true, delay: '4,6,5', delayMode: 'random', pause: true }
+};
+
+/* ---------- 저장 ---------- */
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if (s && s.cfg) state = Object.assign(state, s, { cfg: Object.assign(state.cfg, s.cfg), adb: Object.assign(state.adb, s.adb || {}) });
+    Object.values(state.data).forEach(ph => ph.forEach(p => { if (!p.names) p.names = p.ids.map(() => ''); }));
+    if (!state.cur.step) state.cur.step = 0;
+  } catch (e) {}
+}
+
+const $ = id => document.getElementById(id);
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 1600); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- 탭 ---------- */
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  if (name === 'board') renderBoard();
+  if (name === 'reg') renderReg();
+  if (name === 'adb') renderSerials();
+}
+
+/* ---------- 설정 ---------- */
+function renderArtistInputs() {
+  const n = state.cfg.artists;
+  while (state.artistNames.length < n) state.artistNames.push('아티스트' + (state.artistNames.length + 1));
+  state.artistNames.length = n;
+  $('artist-inputs').innerHTML = state.artistNames.map((nm, i) =>
+    `<input type="text" data-ai="${i}" value="${esc(nm)}" placeholder="아티스트 ${i + 1} 이름">`).join('');
+  $('artist-inputs').querySelectorAll('input').forEach(inp => inp.onchange = () => {
+    const i = +inp.dataset.ai, oldName = state.artistNames[i], newName = inp.value.trim() || oldName;
+    if (newName !== oldName && state.data[oldName]) {
+      if (state.data[newName]) { toast('이미 있는 이름입니다'); inp.value = oldName; return; }
+      state.data[newName] = state.data[oldName]; delete state.data[oldName];
+      Object.keys(state.serials).forEach(k => { if (k.startsWith(oldName + '|')) { state.serials[newName + k.slice(oldName.length)] = state.serials[k]; delete state.serials[k]; } });
+      if (state.cur.key && state.cur.key.startsWith(oldName + '|')) state.cur.key = newName + state.cur.key.slice(oldName.length);
+    }
+    state.artistNames[i] = newName; inp.value = newName;
+    save(); renderPasteArtist(); updateHeader();
+  });
+  renderPasteArtist();
+}
+function renderPasteArtist() {
+  $('paste-artist').innerHTML = state.artistNames.map(n => `<option>${esc(n)}</option>`).join('');
+}
+['cfg-artists','cfg-phones','cfg-per'].forEach(id => $(id).onchange = () => {
+  state.cfg.artists = Math.max(1, +$('cfg-artists').value || 1);
+  state.cfg.phones = Math.max(1, +$('cfg-phones').value || 1);
+  state.cfg.per = Math.max(1, +$('cfg-per').value || 30);
+  renderArtistInputs(); save();
+});
+
+/* ---------- 아이디 정리 ---------- */
+function cleanId(v) {
+  return String(v == null ? '' : v).replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/^@/, '').trim();
+}
+function cleanName(v) { return String(v == null ? '' : v).replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim(); }
+/* 붙여넣기 줄 → {ids, names}. 한 줄에 "아이디 이름", 또는 아이디만(쉼표 구분 가능) */
+function parseLines(text) {
+  const ids = [], names = [];
+  text.split(/\r?\n/).forEach(line => {
+    line = line.trim(); if (!line) return;
+    const m = line.match(/^(\S+)\s+(.+)$/);
+    if (m && !line.includes(',')) { const id = cleanId(m[1]); if (id) { ids.push(id); names.push(cleanName(m[2])); } }
+    else line.split(/[,;]+/).forEach(t => { const id = cleanId(t); if (id) { ids.push(id); names.push(''); } });
+  });
+  return { ids, names };
+}
+/* 표시 이름 만들기 */
+function displayName(artist, phone, k) {
+  const tpl = state.cfg.tpl || '{이름}';
+  const nm = (phone.names && phone.names[k]) || phone.ids[k] || '';
+  const width = String(phone.ids.length).length < 2 ? 2 : String(phone.ids.length).length;
+  let out = tpl.replace(/\{번호\}/g, String(k + 1).padStart(width, '0'))
+    .replace(/\{이름\}/g, nm).replace(/\{아이디\}/g, phone.ids[k] || '')
+    .replace(/\{아티스트\}/g, artist).replace(/\{폰\}/g, phone.label);
+  out = out.replace(/^[\s_\-.·|/]+|[\s_\-.·|/]+$/g, '').replace(/([_\-.·|/])\1+/g, '$1').trim();
+  return out || nm || phone.ids[k] || '';
+}
+function renderTplPreview() {
+  const fake = { label: '폰1', ids: ['user_abc'], names: ['김민지'] };
+  $('tpl-preview').textContent = displayName(state.artistNames[0] || '아티스트', fake, 0) + '  (예: 1번 김민지 / user_abc)';
+}
+
+/* 아티스트별 아이디 목록 → 폰별로 나누기. phoneHints: 같은 길이의 폰번호 배열(없으면 null) */
+function distribute(artist, ids, names, phoneHints, mode) {
+  const per = state.cfg.per;
+  let existing = [];
+  if (mode === 'append' && state.data[artist]) {
+    state.data[artist].forEach(p => p.ids.forEach((id, i) => existing.push({ id, name: (p.names || [])[i] || '', done: p.done[i], phone: null })));
+  }
+  const items = existing.concat(ids.map((id, i) => ({ id, name: (names && names[i]) || '', done: false, phone: phoneHints ? phoneHints[i] : null })));
+  let phones = [];
+  if (items.some(x => x.phone)) {
+    // 엑셀에 폰 번호가 있으면 그대로
+    const map = new Map();
+    items.forEach(x => { const k = x.phone || '1'; if (!map.has(k)) map.set(k, []); map.get(k).push(x); });
+    [...map.keys()].sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0) || String(a).localeCompare(String(b))).forEach(k => {
+      const arr = map.get(k); phones.push({ label: /^\d+$/.test(k) ? `폰${k}` : String(k), ids: arr.map(x => x.id), names: arr.map(x => x.name), done: arr.map(x => x.done) });
+    });
+  } else {
+    const nPhones = Math.max(state.cfg.phones, Math.ceil(items.length / per));
+    for (let p = 0; p < nPhones; p++) {
+      const arr = items.slice(p * per, (p + 1) * per);
+      phones.push({ label: `폰${p + 1}`, ids: arr.map(x => x.id), names: arr.map(x => x.name), done: arr.map(x => x.done) });
+    }
+  }
+  state.data[artist] = phones;
+  if (!state.artistNames.includes(artist)) {
+    state.artistNames.push(artist); state.cfg.artists = state.artistNames.length; $('cfg-artists').value = state.cfg.artists;
+  }
+}
+
+function reportLoad(groups) {
+  const lines = [];
+  let total = 0;
+  Object.entries(groups).forEach(([artist, g]) => {
+    total += g.ids.length;
+    const phones = state.data[artist];
+    const dupes = findDupes(g.ids);
+    const odd = g.ids.filter(id => /[^\x21-\x7E]/.test(id));
+    const named = (g.names || []).filter(Boolean).length;
+    let l = `<span class="ok">✓ ${esc(artist)}</span> — ${g.ids.length}명 (이름 ${named}명) → ${phones.map(p => `${esc(p.label)} ${p.ids.length}명`).join(' / ')}`;
+    if (!named) l += ` <span class="warn">— 이름 열이 없어 표시 이름에 {이름} 대신 아이디가 들어갑니다</span>`;
+    if (phones.some(p => p.ids.length > state.cfg.per)) l += ` <span class="warn">(폰당 ${state.cfg.per}명 초과 폰 있음)</span>`;
+    if (dupes.length) l += `<br>&nbsp;&nbsp;<span class="warn">⚠ 중복 아이디 ${dupes.length}개: ${dupes.slice(0, 10).map(esc).join(', ')}${dupes.length > 10 ? ' …' : ''}</span>`;
+    if (odd.length) l += `<br>&nbsp;&nbsp;<span class="warn">⚠ 한글·공백 등 특수문자 포함 ${odd.length}개 (자동입력 불가, 수동 확인): ${odd.slice(0, 5).map(esc).join(', ')}</span>`;
+    lines.push(l);
+  });
+  $('load-msg').innerHTML = lines.join('<br>') + `<br><b>총 ${total}명 분배 완료.</b> ② 폰별 분배 현황에서 확인하세요.`;
+  save(); updateHeader();
+  toast(`${total}명 분배 완료`);
+}
+function findDupes(ids) {
+  const seen = new Set(), d = new Set();
+  ids.forEach(x => { const k = x.toLowerCase(); if (seen.has(k)) d.add(x); seen.add(k); });
+  return [...d];
+}
+
+/* ---------- 붙여넣기 ---------- */
+$('btn-paste').onclick = () => {
+  const text = $('paste-box').value;
+  if (!text.trim()) { toast('아이디를 붙여넣어 주세요'); return; }
+  const mode = $('paste-mode').value;
+  const rows = text.split(/\r?\n/).filter(l => l.trim());
+  const isTab = rows.filter(r => r.includes('\t')).length >= rows.length * 0.6;
+  const groups = {};
+  if (isTab) {
+    // 엑셀 복사 → 표처럼 처리
+    const table = rows.map(r => r.split('\t'));
+    parseTable(table, groups, $('paste-artist').value);
+  } else {
+    const r = parseLines(text);
+    groups[$('paste-artist').value] = { ids: r.ids, names: r.names, phones: null };
+  }
+  applyGroups(groups, mode);
+};
+
+function applyGroups(groups, mode) {
+  const keys = Object.keys(groups).filter(k => groups[k].ids.length);
+  if (!keys.length) { $('load-msg').innerHTML = '<span class="err">아이디를 찾지 못했습니다. 열 이름(아티스트 / 아이디)을 확인해 주세요.</span>'; return; }
+  keys.forEach(a => distribute(a, groups[a].ids, groups[a].names, groups[a].phones, mode));
+  const out = {}; keys.forEach(k => out[k] = groups[k]);
+  if (!state.cur.key) { const a = keys[0]; state.cur = { key: a + '|0', idx: 0, step: 0 }; }
+  reportLoad(out);
+}
+
+/* 2차원 배열 → {artist: {ids, phones}} */
+function parseTable(table, groups, defaultArtist) {
+  table = table.filter(r => r.some(c => String(c).trim() !== ''));
+  if (!table.length) return;
+  const head = table[0].map(c => String(c).replace(/\s/g, '').toLowerCase());
+  const find = (...keys) => head.findIndex(h => keys.some(k => h.includes(k)));
+  let ai = find('아티스트', '멤버', 'artist', 'member', '가수');
+  let ii = find('아이디', '카톡id', '라인id', 'id', '계정', 'account', 'user');
+  let ni = head.findIndex((h, k) => k !== ii && k !== ai && ['이름', '성명', '닉네임', '표시', 'name', '성함'].some(x => h.includes(x)));
+  let pi = find('핸드폰', '휴대폰', '폰', 'phone', '기기', '디바이스', 'device');
+  if (pi === ai || pi === ii || pi === ni) pi = -1;
+  const hasHeader = ai >= 0 || ii >= 0 || ni >= 0;
+  const body = hasHeader ? table.slice(1) : table;
+  const cols = Math.max(...table.map(r => r.length));
+  if (ii < 0) {
+    // 아이디 열 이름이 없으면: 아티스트 열 다음 / 헤더 없으면 1열=아이디, 2열 이상이면 1열=아티스트·2열=아이디
+    if (ai >= 0) ii = ai === 0 ? 1 : 0;
+    else if (cols >= 2 && !hasHeader) { ai = 0; ii = 1; }
+    else ii = 0;
+  }
+  // 헤더 없는 표: 아이디 바로 다음 열을 이름으로 (예: 아티스트 | 아이디 | 이름)
+  if (!hasHeader && ni < 0 && cols > ii + 1 && ii + 1 !== ai && ii + 1 !== pi) ni = ii + 1;
+  body.forEach(r => {
+    const id = cleanId(r[ii]);
+    if (!id) return;
+    const artist = ai >= 0 ? (String(r[ai] || '').trim() || defaultArtist) : defaultArtist;
+    if (!groups[artist]) groups[artist] = { ids: [], names: [], phones: pi >= 0 ? [] : null };
+    groups[artist].ids.push(id);
+    groups[artist].names.push(ni >= 0 ? cleanName(r[ni]) : '');
+    if (groups[artist].phones) groups[artist].phones.push(String(r[pi] || '').replace(/[^0-9A-Za-z가-힣]/g, '').replace(/^(폰|phone)/i, '') || null);
+  });
+}
+
+/* ---------- 엑셀 업로드 ---------- */
+const zone = $('upload-zone');
+zone.onclick = () => $('file-input').click();
+zone.ondragover = e => { e.preventDefault(); zone.classList.add('dragover'); };
+zone.ondragleave = () => zone.classList.remove('dragover');
+zone.ondrop = e => { e.preventDefault(); zone.classList.remove('dragover'); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); };
+$('file-input').onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); e.target.value = ''; };
+
+function readFile(file) {
+  if (typeof XLSX === 'undefined') { toast('엑셀 라이브러리를 불러오지 못했습니다 (인터넷 확인)'); return; }
+  const rd = new FileReader();
+  rd.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'array' });
+      const groups = {};
+      const sheets = wb.SheetNames.filter(n => !/전체\s*응모자|요약|summary/i.test(n));
+      sheets.forEach(sn => {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
+        // 시트가 여러 개면 시트 이름을 기본 아티스트로
+        const def = sheets.length > 1 ? sn : $('paste-artist').value;
+        parseTable(rows, groups, def);
+      });
+      applyGroups(groups, $('paste-mode').value);
+    } catch (err) {
+      $('load-msg').innerHTML = `<span class="err">파일을 읽지 못했습니다: ${esc(err.message)}</span>`;
+    }
+  };
+  rd.readAsArrayBuffer(file);
+}
+
+$('btn-reset').onclick = () => {
+  if (!confirm('모든 당첨자 데이터와 완료 체크를 지울까요?')) return;
+  state.data = {}; state.cur = { key: null, idx: 0 }; save(); updateHeader();
+  $('load-msg').innerHTML = ''; toast('초기화했습니다');
+};
+
+/* ---------- 공통 ---------- */
+function allPhones() {
+  const list = [];
+  state.artistNames.forEach(a => (state.data[a] || []).forEach((p, i) => list.push({ key: a + '|' + i, artist: a, idx: i, phone: p })));
+  Object.keys(state.data).forEach(a => { if (!state.artistNames.includes(a)) state.data[a].forEach((p, i) => list.push({ key: a + '|' + i, artist: a, idx: i, phone: p })); });
+  return list;
+}
+function getPhone(key) {
+  if (!key) return null;
+  const k = key.lastIndexOf('|'); const a = key.slice(0, k), i = +key.slice(k + 1);
+  return state.data[a] && state.data[a][i] ? { artist: a, idx: i, phone: state.data[a][i] } : null;
+}
+function updateHeader() {
+  const ps = allPhones();
+  $('h-total').textContent = ps.reduce((s, p) => s + p.phone.ids.length, 0);
+  $('h-phones').textContent = ps.filter(p => p.phone.ids.length).length;
+  $('h-done').textContent = ps.reduce((s, p) => s + p.phone.done.filter(Boolean).length, 0);
+}
+
+/* ---------- ② 현황 ---------- */
+function renderBoard() {
+  const g = $('artist-grid');
+  const artists = [...new Set(allPhones().map(p => p.artist))];
+  if (!artists.length) { g.innerHTML = '<div class="empty">① 에서 당첨자를 먼저 불러와 주세요.</div>'; return; }
+  g.innerHTML = artists.map(a => {
+    const phones = state.data[a];
+    const tot = phones.reduce((s, p) => s + p.ids.length, 0);
+    const done = phones.reduce((s, p) => s + p.done.filter(Boolean).length, 0);
+    return `<div class="artist-card">
+      <div class="artist-head"><div class="artist-name">${esc(a)}</div><div class="artist-count">${done} / ${tot}명 완료</div></div>
+      ${phones.map((p, i) => {
+        const d = p.done.filter(Boolean).length, n = p.ids.length;
+        return `<div class="phone-row ${n && d === n ? 'complete' : ''}" data-key="${esc(a + '|' + i)}">
+          <div class="phone-label">${esc(p.label)}</div>
+          <div class="phone-bar"><div style="width:${n ? d / n * 100 : 0}%"></div></div>
+          <div class="phone-stat">${d}/${n}${n && d === n ? ' ✓' : ''}</div>
+          <button class="btn small" data-copy="${esc(a + '|' + i)}">복사</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+  g.querySelectorAll('.phone-row').forEach(r => r.onclick = e => {
+    if (e.target.dataset.copy) { const ph = getPhone(e.target.dataset.copy); copyText(ph.phone.ids.join('\n'), `${ph.artist} ${ph.phone.label} ${ph.phone.ids.length}명 복사`); return; }
+    openPhone(r.dataset.key);
+  });
+}
+function openPhone(key) {
+  const ph = getPhone(key); if (!ph) return;
+  const first = ph.phone.done.findIndex(x => !x);
+  state.cur = { key, idx: first < 0 ? 0 : first, step: 0 }; save(); switchTab('reg');
+}
+$('btn-reset-done').onclick = () => {
+  if (!confirm('모든 폰의 완료 체크를 해제할까요?')) return;
+  allPhones().forEach(p => p.phone.done = p.phone.ids.map(() => false)); save(); renderBoard(); updateHeader();
+};
+
+/* ---------- ③ 등록 ---------- */
+function renderReg() {
+  const ps = allPhones();
+  const sel = $('reg-phone');
+  if (!ps.length) {
+    sel.innerHTML = '<option>당첨자 없음</option>';
+    $('big-id').textContent = '-'; $('big-name').textContent = '-'; $('big-step').innerHTML = ''; $('big-pos').textContent = '① 에서 당첨자를 먼저 불러와 주세요'; $('big-next').textContent = ''; $('id-list').innerHTML = '';
+    return;
+  }
+  if (!getPhone(state.cur.key)) state.cur = { key: ps[0].key, idx: 0 };
+  sel.innerHTML = ps.map(p => {
+    const d = p.phone.done.filter(Boolean).length, n = p.phone.ids.length;
+    return `<option value="${esc(p.key)}" ${p.key === state.cur.key ? 'selected' : ''}>${esc(p.artist)} · ${esc(p.phone.label)} (${d}/${n})${n && d === n ? ' ✓' : ''}</option>`;
+  }).join('');
+  const { artist, phone } = getPhone(state.cur.key);
+  const ids = phone.ids;
+  if (state.cur.idx >= ids.length) state.cur.idx = Math.max(0, ids.length - 1);
+  const i = state.cur.idx;
+  const doneN = phone.done.filter(Boolean).length;
+  const two = !!state.cfg.twoStep, step = two ? (state.cur.step || 0) : 0;
+  $('big-id').classList.toggle('dim', two && step === 1);
+  $('big-name').classList.toggle('dim', two && step === 0);
+  $('big-step').innerHTML = '';
+  if (!ids.length) { $('big-id').textContent = '-'; $('big-name').textContent = '-'; $('big-pos').textContent = '이 폰에는 배정된 아이디가 없습니다'; $('big-next').textContent = ''; }
+  else if (doneN === ids.length) {
+    $('big-pos').textContent = `${artist} · ${phone.label} — ${ids.length}명 모두 완료 🎉`;
+    $('big-id').textContent = '완료!'; $('big-name').textContent = ''; $('big-next').textContent = '] 키 또는 "다음 폰 ▶" 으로 넘어가세요';
+    $('big-id').classList.remove('dim');
+  } else {
+    $('big-pos').textContent = `${artist} · ${phone.label} — ${i + 1} / ${ids.length}번째 (완료 ${doneN})`;
+    $('big-id').textContent = ids[i];
+    $('big-name').textContent = displayName(artist, phone, i);
+    if (two) $('big-step').innerHTML = `<span class="${step === 0 ? 'on' : 'ok'}">① 아이디 복사</span><span class="${step === 1 ? 'on' : ''}">② 이름 복사</span>`;
+    $('big-next').textContent = ids[i + 1] ? `다음: ${ids[i + 1]}  ·  ${displayName(artist, phone, i + 1)}` : '마지막 사람입니다';
+  }
+  $('btn-copy-next').textContent = two ? (step === 0 ? '📋 ① 아이디 복사 (Space)' : '📋 ② 이름 복사하고 다음 (Space)') : '📋 아이디 복사하고 다음 (Space)';
+  const dup = new Set(findDupes(ids).map(x => x.toLowerCase()));
+  $('id-list').innerHTML = ids.map((id, k) => `<div class="id-item ${phone.done[k] ? 'done' : ''} ${k === i && doneN !== ids.length ? 'current' : ''}" data-k="${k}">
+      <span class="n">${k + 1}</span><span class="v">${esc(id)}</span><span class="nm">${esc(displayName(artist, phone, k))}</span>
+      ${dup.has(id.toLowerCase()) ? '<span class="flag">중복</span>' : ''}${/[^\x21-\x7E]/.test(id) ? '<span class="flag">특수문자</span>' : ''}
+      <span class="ck" data-ck="${k}">${phone.done[k] ? '✓' : ''}</span></div>`).join('');
+  $('id-list').querySelectorAll('.id-item').forEach(el => el.onclick = e => {
+    const k = +el.dataset.k;
+    if (e.target.dataset.ck !== undefined) { phone.done[k] = !phone.done[k]; }
+    else { state.cur.idx = k; state.cur.step = 0; }
+    save(); renderReg(); updateHeader();
+  });
+  const cur = $('id-list').querySelector('.current'); if (cur) cur.scrollIntoView({ block: 'nearest' });
+}
+$('reg-phone').onchange = e => openPhone(e.target.value);
+
+function copyText(t, msg) {
+  const done = () => toast(msg || '복사됨');
+  if (navigator.clipboard && window.isSecureContext !== false) {
+    navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done));
+  } else fallbackCopy(t, done);
+}
+function fallbackCopy(t, cb) {
+  const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); cb();
+}
+function copyAndNext() {
+  const ph = getPhone(state.cur.key); if (!ph || !ph.phone.ids.length) return;
+  const p = ph.phone, i = state.cur.idx;
+  if (p.done.every(Boolean)) { nextPhone(1); return; }
+  if (state.cfg.twoStep && !state.cur.step) {
+    copyText(p.ids[i], `① 아이디 복사: ${p.ids[i]}`);
+    state.cur.step = 1; save(); renderReg(); return;
+  }
+  if (state.cfg.twoStep) { const nm = displayName(ph.artist, p, i); copyText(nm, `② 이름 복사: ${nm}`); }
+  else copyText(p.ids[i], `복사: ${p.ids[i]}`);
+  state.cur.step = 0;
+  p.done[i] = true;
+  let n = p.done.findIndex((d, k) => !d && k > i); if (n < 0) n = p.done.findIndex(d => !d);
+  state.cur.idx = n < 0 ? i : n;
+  save(); renderReg(); updateHeader();
+}
+function move(d) {
+  const ph = getPhone(state.cur.key); if (!ph) return;
+  state.cur.idx = Math.min(Math.max(0, state.cur.idx + d), ph.phone.ids.length - 1); state.cur.step = 0; save(); renderReg();
+}
+function nextPhone(d) {
+  const ps = allPhones(); if (!ps.length) return;
+  const k = ps.findIndex(p => p.key === state.cur.key);
+  const n = ps[(k + d + ps.length) % ps.length]; openPhone(n.key);
+}
+$('btn-copy-next').onclick = copyAndNext;
+$('btn-back').onclick = () => move(-1);
+$('btn-skip').onclick = () => move(1);
+$('btn-next-phone').onclick = () => nextPhone(1);
+$('btn-prev-phone').onclick = () => nextPhone(-1);
+$('big-id').onclick = () => { const ph = getPhone(state.cur.key); if (ph && ph.phone.ids[state.cur.idx]) copyText(ph.phone.ids[state.cur.idx]); };
+$('btn-copy-all').onclick = () => { const ph = getPhone(state.cur.key); if (ph) copyText(ph.phone.ids.map((id, k) => id + '\t' + displayName(ph.artist, ph.phone, k)).join('\n'), `${ph.phone.ids.length}명 (아이디+이름) 전체 복사`); };
+$('big-name').onclick = () => { const ph = getPhone(state.cur.key); if (ph && ph.phone.ids[state.cur.idx]) { const nm = displayName(ph.artist, ph.phone, state.cur.idx); copyText(nm, `이름 복사: ${nm}`); } };
+$('btn-bat-one').onclick = () => { const ph = getPhone(state.cur.key); if (ph) downloadBat([ph]); };
+
+document.addEventListener('keydown', e => {
+  if (!$('tab-reg').classList.contains('active')) return;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); copyAndNext(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); move(1); }
+  else if (e.key === ']') nextPhone(1);
+  else if (e.key === '[') nextPhone(-1);
+});
+
+/* ---------- 엑셀 다운로드 ---------- */
+$('btn-xlsx-all').onclick = () => {
+  const ps = allPhones(); if (!ps.length) { toast('데이터가 없습니다'); return; }
+  const wb = XLSX.utils.book_new();
+  const artists = [...new Set(ps.map(p => p.artist))];
+  // 요약: 폰별 가로 배치 (폰1 | 폰2 ...)
+  artists.forEach(a => {
+    const phones = state.data[a];
+    const maxN = Math.max(...phones.map(p => p.ids.length), 0);
+    const aoa = [['번호', ...phones.flatMap(p => [`${p.label} 아이디`, `${p.label} 표시이름`])]];
+    for (let r = 0; r < maxN; r++) aoa.push([r + 1, ...phones.flatMap(p => p.ids[r] ? [p.ids[r], displayName(a, p, r)] : ['', ''])]);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 6 }, ...phones.flatMap(() => [{ wch: 20 }, { wch: 20 }])];
+    XLSX.utils.book_append_sheet(wb, ws, a.replace(/[\\\/\?\*\[\]:]/g, '').slice(0, 31) || 'Sheet');
+  });
+  const all = [['아티스트', '폰', '번호', '아이디', '이름', '표시이름', '등록완료']];
+  ps.forEach(p => p.phone.ids.forEach((id, i) => all.push([p.artist, p.phone.label, i + 1, id, (p.phone.names || [])[i] || '', displayName(p.artist, p.phone, i), p.phone.done[i] ? 'O' : ''])));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(all), '전체목록');
+  const d = new Date(); const ds = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  XLSX.writeFile(wb, `영상통화_폰별분배표_${ds}.xlsx`);
+};
+
+/* ---------- ④ ADB 매크로 ---------- */
+const STEP_TYPES = {
+  tap:   '👆 화면 탭',
+  id:    '⌨ 아이디 입력',
+  name:  '⌨ 표시 이름 입력',
+  clear: '🧹 입력칸 비우기',
+  enter: '↵ 엔터(검색/완료)',
+  back:  '◀ 뒤로가기',
+  wait:  '⏱ 대기'
+};
+const T = (label, x = '', y = '') => ({ type: 'tap', label, x, y });
+const W = sec => ({ type: 'wait', sec });
+const PRESETS = {
+  kakao: [
+    T('하단 「친구」 탭 (매번 같은 화면에서 시작)'), W(1),
+    T('오른쪽 위 「친구 추가」 아이콘 (사람+)'), W(1.5),
+    T('「ID로 추가」'), W(1.5),
+    T('카카오톡 ID 입력칸'), { type: 'clear' }, { type: 'id' }, W(0.5), { type: 'enter' }, W(2.5),
+    T('검색 결과의 노란 「친구 추가」 버튼'), W(2.5),
+    { type: 'back' }, W(1), { type: 'back' }, W(1),
+    T('친구 목록 맨 위 「새로운 친구」에서 방금 추가한 친구 (또는 친구 검색)'), W(1.5),
+    T('친구 프로필에서 이름 옆 편집(연필) 아이콘'), W(1.5),
+    T('이름 입력칸'), { type: 'clear' }, { type: 'name' }, W(0.5),
+    T('「확인」 버튼'), W(1.5),
+    { type: 'back' }, W(1)
+  ],
+  line: [
+    T('홈 상단 「친구 추가」 아이콘'), W(1),
+    T('「검색」 메뉴'), W(1),
+    T('「ID」 선택'), T('ID 입력칸'), { type: 'clear' }, { type: 'id' }, { type: 'enter' }, W(2),
+    T('검색 결과의 「추가」 버튼'), W(2),
+    T('추가된 친구 프로필 → 이름 옆 편집(연필)'), W(1),
+    T('이름 입력칸'), { type: 'clear' }, { type: 'name' }, W(0.5),
+    T('「저장」 버튼'), W(1),
+    { type: 'back' }, W(0.5), { type: 'back' }, W(0.5), { type: 'back' }
+  ],
+  idonly: [T('아이디 입력칸'), W(0.3), { type: 'clear' }, { type: 'id' }, T('등록/추가 버튼')]
+};
+function ensureSteps() {
+  const a = state.adb;
+  if (!Array.isArray(a.steps) && a.inX === undefined) a.steps = JSON.parse(JSON.stringify(PRESETS.kakao));
+  if (!Array.isArray(a.steps)) {
+    // 예전 설정(입력칸/버튼 좌표) → 단계로 변환
+    a.steps = [T('아이디 입력칸', a.inX || '', a.inY || ''), W(+a.pre || 0.3), { type: 'clear' }, { type: 'id' }];
+    if (a.submit === 'enter' || a.submit === 'both') a.steps.push({ type: 'enter' });
+    if (a.submit !== 'enter') a.steps.push(T('등록/추가 버튼', a.btnX || '', a.btnY || ''));
+    if (a.hidekb) a.steps.push({ type: 'back' });
+    a.delay = '4,6,5';
+  }
+  if (a.kb === undefined) a.kb = true;
+  if (typeof a.delay === 'number') a.delay = String(a.delay);
+  if (!a.delayMode) a.delayMode = 'random';
+}
+function renderAdb() {
+  ensureSteps();
+  $('adb-kb').checked = !!state.adb.kb; $('adb-pause').checked = !!state.adb.pause; $('adb-delay').value = state.adb.delay; $('adb-delay-mode').value = state.adb.delayMode;
+  renderEstimate();
+  renderSteps();
+}
+function renderSteps() {
+  const st = state.adb.steps;
+  if ($('adb-estimate')) setTimeout(renderEstimate);
+  $('step-list').innerHTML = st.length ? st.map((s, i) => `<div class="step-row" data-i="${i}">
+      <span class="step-n">${i + 1}</span>
+      <select data-f="type">${Object.entries(STEP_TYPES).map(([k, v]) => `<option value="${k}" ${k === s.type ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      ${s.type === 'tap' ? `<input type="text" data-f="label" value="${esc(s.label || '')}" placeholder="어디를 누르는지 메모" class="step-label">
+        <input type="number" data-f="x" value="${esc(s.x ?? '')}" placeholder="X" class="${s.x === '' || s.x == null ? 'need' : ''}">
+        <input type="number" data-f="y" value="${esc(s.y ?? '')}" placeholder="Y" class="${s.y === '' || s.y == null ? 'need' : ''}">` : ''}
+      ${s.type === 'wait' ? `<input type="number" data-f="sec" step="0.5" min="0" value="${esc(s.sec ?? 1)}"> <span class="step-hint">초</span>` : ''}
+      ${s.type === 'id' ? '<span class="step-hint">당첨자 아이디</span>' : ''}
+      ${s.type === 'name' ? '<span class="step-hint">표시 이름 (예: 01_김민지) — ADBKeyBoard 필요</span>' : ''}
+      ${s.type === 'clear' ? '<span class="step-hint">커서가 있는 칸의 글자를 모두 지움</span>' : ''}
+      <span class="step-btns"><button class="btn small" data-act="up">↑</button><button class="btn small" data-act="down">↓</button><button class="btn small danger" data-act="del">✕</button></span>
+    </div>`).join('') : '<div class="empty" style="padding:14px">단계가 없습니다. 기본 틀을 불러오거나 단계를 추가하세요.</div>';
+  $('step-list').querySelectorAll('.step-row').forEach(row => {
+    const i = +row.dataset.i;
+    row.querySelectorAll('[data-f]').forEach(el => el.onchange = () => {
+      const f = el.dataset.f, step = state.adb.steps[i];
+      if (f === 'type') { state.adb.steps[i] = el.value === 'tap' ? T('', '', '') : el.value === 'wait' ? W(1) : { type: el.value }; save(); renderSteps(); return; }
+      step[f] = (f === 'x' || f === 'y' || f === 'sec') ? (el.value === '' ? '' : +el.value) : el.value;
+      if (f === 'x' || f === 'y') el.classList.toggle('need', el.value === '');
+      save(); renderEstimate();
+    });
+    row.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+      const st = state.adb.steps, act = b.dataset.act;
+      if (act === 'del') st.splice(i, 1);
+      if (act === 'up' && i > 0) [st[i - 1], st[i]] = [st[i], st[i - 1]];
+      if (act === 'down' && i < st.length - 1) [st[i + 1], st[i]] = [st[i], st[i + 1]];
+      save(); renderSteps();
+    });
+  });
+}
+$('adb-preset').onchange = e => {
+  const k = e.target.value; if (!k) return;
+  if (state.adb.steps.length && !confirm('지금 동작 순서를 기본 틀로 바꿀까요? (적어 둔 좌표가 지워집니다)')) { e.target.value = ''; return; }
+  state.adb.steps = JSON.parse(JSON.stringify(PRESETS[k]));
+  if (k !== 'idonly') state.adb.kb = true;
+  e.target.value = ''; save(); renderAdb(); toast('기본 틀을 불러왔습니다. 좌표를 채워 주세요');
+};
+$('btn-step-add').onclick = () => { state.adb.steps.push(T('', '', '')); save(); renderSteps(); };
+$('adb-kb').onchange = () => { state.adb.kb = $('adb-kb').checked; save(); };
+$('adb-pause').onchange = () => { state.adb.pause = $('adb-pause').checked; save(); };
+$('adb-delay').onchange = () => { const v = parseDelays($('adb-delay').value); state.adb.delay = v.join(','); $('adb-delay').value = state.adb.delay; save(); renderEstimate(); };
+$('adb-delay-mode').onchange = () => { state.adb.delayMode = $('adb-delay-mode').value; save(); };
+/* "4,6,5" → [4,6,5] */
+function parseDelays(t) { return String(t || '').split(/[,\s/]+/).map(Number).filter(n => isFinite(n) && n >= 0); }
+/* n명 분량의 대기 시간 목록 */
+function delaySeq(n) {
+  const d = parseDelays(state.adb.delay);
+  if (!d.length) return Array(n).fill(0);
+  if (state.adb.delayMode === 'cycle') return Array.from({ length: n }, (_, i) => d[i % d.length]);
+  // 무작위: 같은 값이 연달아 나오지 않도록
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    let v, tries = 0;
+    do { v = d[Math.floor(Math.random() * d.length)]; } while (d.length > 1 && v === out[i - 1] && ++tries < 10);
+    out.push(v);
+  }
+  return out;
+}
+function renderEstimate() {
+  const d = parseDelays(state.adb.delay);
+  const avg = d.length ? d.reduce((x, y) => x + y, 0) / d.length : 0;
+  const st = state.adb.steps || [];
+  const per = st.reduce((x, s) => x + (s.type === 'wait' ? (+s.sec || 0) : 0.4), 0) + avg;
+  const min = Math.ceil(per * state.cfg.per / 60);
+  $('adb-estimate').textContent = `한 명 약 ${per.toFixed(0)}초 · 폰 1대(${state.cfg.per}명) 약 ${min}분`;
+}
+
+function renderSerials() {
+  const ps = allPhones();
+  const g = $('serial-grid');
+  if (!ps.length) { g.innerHTML = '<div class="empty" style="padding:10px;text-align:left">당첨자를 불러오면 폰 목록이 나타납니다.</div>'; return; }
+  g.innerHTML = ps.map(p => `<div class="field"><label>${esc(p.artist)} · ${esc(p.phone.label)}</label><input type="text" data-sk="${esc(p.key)}" value="${esc(state.serials[p.key] || '')}" placeholder="예: R58N12ABCDE (비워도 됨)"></div>`).join('');
+  g.querySelectorAll('input').forEach(i => i.onchange = () => { state.serials[i.dataset.sk] = i.value.trim(); save(); });
+}
+
+function adbProblems() {
+  ensureSteps();
+  const st = state.adb.steps, p = [];
+  if (!st.length) p.push('동작 순서가 비어 있음');
+  st.forEach((s, i) => { if (s.type === 'tap' && (s.x === '' || s.y === '' || s.x == null || s.y == null)) p.push(`${i + 1}번 단계(${s.label || '화면 탭'}) 좌표`); });
+  if (!st.some(s => s.type === 'id')) p.push('「아이디 입력」 단계');
+  if (st.some(s => s.type === 'name') && !state.adb.kb) p.push('한글 이름 입력에는 「ADBKeyBoard 사용」 체크');
+  return p;
+}
+const ADBKB = 'com.android.adbkeyboard/.AdbIME';
+function b64utf8(t) { return btoa(unescape(encodeURIComponent(t))); }
+/* 기기 쉘에서 글자 입력하는 명령 */
+function typeCmd(text) {
+  if (state.adb.kb) return `am broadcast -a ADB_INPUT_B64 --es msg ${b64utf8(text)} >/dev/null`;
+  return `input text '${text.replace(/'/g, `'\\''`).replace(/ /g, '%s')}'`;
+}
+function clearCmd() {
+  return state.adb.kb ? 'am broadcast -a ADB_CLEAR_TEXT >/dev/null' : `input keyevent 123; input keyevent ${Array(40).fill(67).join(' ')}`;
+}
+/* .bat 안에서 % 는 %% 로, echo 용 특수문자 이스케이프 */
+function batSafe(s) { return String(s).replace(/%/g, '%%'); }
+function batEcho(s) { return batSafe(s).replace(/[&|<>^"()]/g, '^$&'); }
+
+function phoneBlock(ph, onlyFirst) {
+  const a = state.adb;
+  const ser = state.serials[ph.artist + '|' + ph.idx];
+  const dev = ser ? ` -s ${ser}` : '';
+  let idx = ph.phone.ids.map((_, i) => i).filter(i => !ph.phone.done[i]);
+  if (onlyFirst) idx = idx.slice(0, 1).length ? idx.slice(0, 1) : [0];
+  const skipped = [];
+  const L = [];
+  const title = `${ph.artist} ${ph.phone.label}`;
+  L.push('echo.', 'echo ==================================================');
+  L.push(`echo   ${batEcho(title)}  -  ${idx.length}명 자동입력`);
+  L.push('echo ==================================================');
+  L.push(`adb${dev} get-state >nul 2>&1 || (echo [오류] 폰이 연결되지 않았습니다 ${batEcho(ser || '')} - USB 디버깅을 확인하세요. & pause & goto :eof)`);
+  if (a.kb) {
+    L.push(`adb${dev} shell pm list packages com.android.adbkeyboard | find "adbkeyboard" >nul || (echo [오류] 폰에 ADBKeyBoard 가 설치되지 않았습니다. adb install ADBKeyboard.apk 를 먼저 실행하세요. & pause & goto :eof)`);
+    L.push(`adb${dev} shell "ime enable ${ADBKB} >/dev/null; ime set ${ADBKB} >/dev/null"`);
+  }
+  if (a.pause) { L.push('echo 카카오톡/라인의 시작 화면을 띄운 뒤 아무 키나 누르세요... (중간에 멈추려면 Ctrl+C)'); L.push('pause >nul'); }
+  const delays = delaySeq(idx.length);
+  idx.forEach((k, n) => {
+    const id = ph.phone.ids[k], nm = displayName(ph.artist, ph.phone, k);
+    if (!a.kb && /[^\x21-\x7E]/.test(id)) { skipped.push(id); return; }
+    const cmds = [];
+    a.steps.forEach(s => {
+      if (s.type === 'tap') cmds.push(`input tap ${+s.x} ${+s.y}`);
+      else if (s.type === 'wait') { if (+s.sec > 0) cmds.push(`sleep ${+s.sec}`); }
+      else if (s.type === 'id') cmds.push(typeCmd(id));
+      else if (s.type === 'name') cmds.push(typeCmd(nm));
+      else if (s.type === 'clear') cmds.push(clearCmd());
+      else if (s.type === 'enter') cmds.push('input keyevent 66');
+      else if (s.type === 'back') cmds.push('input keyevent 4');
+    });
+    if (delays[n] > 0 && n < idx.length - 1) cmds.push(`sleep ${delays[n]}`);
+    L.push(`echo [${n + 1}/${idx.length}] ${batEcho(id)}  -^>  ${batEcho(nm)}${delays[n] > 0 && n < idx.length - 1 ? `   ^(다음까지 ${delays[n]}초^)` : ''}`);
+    L.push(`adb${dev} shell "${batSafe(cmds.join('; '))}"`);
+  });
+  if (a.kb) L.push(`adb${dev} shell "ime reset >/dev/null"`);
+  if (skipped.length) {
+    L.push('echo.', 'echo [주의] 아래 아이디는 한글/특수문자라 자동입력하지 못했습니다. 직접 입력하세요:');
+    skipped.forEach(s => L.push(`echo    - ${batEcho(s)}`));
+  }
+  L.push(`echo ${batEcho(title)} 완료!`);
+  return { lines: L, skipped, count: idx.length };
+}
+
+function downloadBat(phones, testOnly) {
+  const prob = adbProblems();
+  if (prob.length) {
+    toast('④ 자동입력 설정을 먼저 채워 주세요'); switchTab('adb');
+    $('adb-msg').innerHTML = `<span class="err">입력 필요: ${prob.map(esc).join(', ')}</span>`; return;
+  }
+  $('adb-msg').innerHTML = '';
+  const L = ['@echo off', 'chcp 65001 >nul', 'cd /d "%~dp0"', 'if exist adb.exe set "PATH=%~dp0;%PATH%"',
+    'where adb >nul 2>&1 || (echo [오류] adb 를 찾을 수 없습니다. 이 파일을 platform-tools 폴더 안에 넣고 실행하세요. & pause & exit /b)',
+    'adb start-server >nul 2>&1', 'call :main', 'echo.', 'echo 모든 작업이 끝났습니다. 앱에서 친구 목록과 이름을 꼭 확인하세요.', 'pause', 'exit /b', '', ':main'];
+  let total = 0, skippedAll = 0;
+  phones.forEach((ph, k) => {
+    const b = phoneBlock(ph, testOnly);
+    total += b.count - b.skipped.length; skippedAll += b.skipped.length;
+    if (k > 0 && !state.serials[ph.artist + '|' + ph.idx]) L.push('echo.', `echo 다음 폰^(${batEcho(ph.artist + ' ' + ph.phone.label)}^)으로 바꿔 꽂고 아무 키나 누르세요...`, 'pause >nul');
+    L.push(...b.lines);
+  });
+  L.push('goto :eof');
+  const blob = new Blob([L.join('\r\n') + '\r\n'], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const aEl = document.createElement('a');
+  const name = testOnly ? `1명테스트_${phones[0].artist}_${phones[0].phone.label}.bat` : phones.length === 1 ? `자동입력_${phones[0].artist}_${phones[0].phone.label}.bat` : '자동입력_전체폰.bat';
+  aEl.href = url; aEl.download = name.replace(/[\\\/:*?"<>|]/g, '_'); document.body.appendChild(aEl); aEl.click(); aEl.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(`${name} 저장 — ${total}명${skippedAll ? ` (수동 ${skippedAll}명)` : ''}`);
+}
+$('btn-bat-all').onclick = () => {
+  const ps = allPhones().filter(p => p.phone.ids.length);
+  if (!ps.length) { toast('데이터가 없습니다'); return; }
+  downloadBat(ps);
+};
+$('btn-adb-test').onclick = () => {
+  const ps = allPhones().filter(p => p.phone.ids.length);
+  const cur = getPhone(state.cur.key);
+  const ph = cur && cur.phone.ids.length ? cur : ps[0];
+  if (!ph) { toast('당첨자를 먼저 불러오세요'); return; }
+  downloadBat([ph], true);
+};
+
+/* ---------- 시작 ---------- */
+load();
+$('cfg-artists').value = state.cfg.artists; $('cfg-phones').value = state.cfg.phones; $('cfg-per').value = state.cfg.per;
+$('cfg-tpl').value = state.cfg.tpl; $('cfg-twostep').checked = !!state.cfg.twoStep;
+$('cfg-tpl').oninput = () => { state.cfg.tpl = $('cfg-tpl').value; save(); renderTplPreview(); };
+$('cfg-twostep').onchange = () => { state.cfg.twoStep = $('cfg-twostep').checked; state.cur.step = 0; save(); };
+renderTplPreview();
+renderArtistInputs(); renderAdb(); updateHeader();
+</script>
+</body>
+</html>
