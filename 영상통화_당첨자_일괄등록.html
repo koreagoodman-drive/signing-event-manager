@@ -246,12 +246,12 @@
       <div class="desc">PC에 USB로 연결한 안드로이드 폰에서 <b>친구 추가 → 아이디 입력 → 추가 → 이름 변경</b>을 한 명씩 자동으로 반복합니다. 동작 순서는 아래에서 직접 짤 수 있어서 카카오톡·라인 모두 쓸 수 있어요. (아이폰은 안 됩니다)</div>
       <ol class="steps">
         <li><b>PC (처음 한 번):</b> <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" style="color:var(--accent)">Android Platform-Tools</a>를 받아 압축을 풀고, 이 도구에서 받은 <code>.bat</code> 파일을 그 폴더(adb.exe가 있는 곳)에 넣습니다.</li>
-        <li><b>폰 (처음 한 번):</b> <code>설정 → 휴대전화 정보 → 소프트웨어 정보 → 빌드번호</code> 7번 탭 → 개발자 옵션에서 <code>USB 디버깅</code>과 <code>포인터 위치</code>를 켭니다.</li>
+        <li><b>갤럭시 (처음 한 번):</b> <code>설정 → 휴대전화 정보 → 소프트웨어 정보 → 빌드번호</code>를 7번 탭 → <code>설정 → 개발자 옵션</code>에서 <code>USB 디버깅</code>과 <code>포인터 위치</code>를 켭니다. USB를 꽂으면 폰에 뜨는 「USB 디버깅을 허용하시겠습니까?」에서 「이 컴퓨터에서 항상 허용」을 체크하고 허용하세요.</li>
         <li><b>한글 이름까지 넣으려면 (처음 한 번):</b> <a href="https://github.com/senzhk/ADBKeyBoard/releases" target="_blank" style="color:var(--accent)">ADBKeyBoard</a>의 <code>ADBKeyboard.apk</code>를 받아 platform-tools 폴더에 넣고, 명령 프롬프트에서 <code>adb install ADBKeyboard.apk</code> 를 실행합니다. 매크로가 시작할 때 이 키보드로 바꾸고, 끝나면 원래 키보드로 돌려놓습니다.</li>
         <li><b>좌표 적기:</b> 포인터 위치가 켜져 있으면 화면을 누를 때 맨 위에 <code>X: 540 Y: 1200</code> 처럼 좌표가 보입니다. 앱에서 실제로 한 명을 손으로 추가해 보면서, 누르는 곳마다 좌표를 아래 단계에 적으세요. 같은 기종이면 한 번만 적으면 됩니다.</li>
         <li>먼저 <b>🧪 1명 테스트</b>로 확인하고, 잘 되면 폰 전체(30명) 파일을 받아 실행하세요.</li>
       </ol>
-      <div class="msg"><span class="warn">⚠ 카카오·라인은 약관에서 자동화 프로그램 사용을 금지하고 있고, 짧은 시간에 아이디 검색을 많이 하면 검색 제한이나 계정 제재를 받을 수 있습니다. 한 명당 대기 시간을 넉넉히 두고(3초 이상 권장), 처음에는 적은 인원으로 시험해 보세요.</span></div>
+      <div class="msg"><span class="warn">⚠ 카카오·라인은 약관에서 자동화 프로그램 사용을 금지하고 있고, 짧은 시간에 아이디 검색을 많이 하면 검색 제한이나 계정 제재를 받을 수 있습니다. 한 명당 대기 시간을 넉넉히, 그리고 4·6·5초처럼 섞어서 두고, 처음에는 적은 인원으로 시험해 보세요.</span></div>
     </div>
 
     <div class="card">
@@ -271,7 +271,12 @@
       <div class="row" style="margin-top:14px;">
         <label class="chk"><input type="checkbox" id="adb-kb" checked> ADBKeyBoard 사용 (한글 이름 입력에 필요)</label>
         <label class="chk"><input type="checkbox" id="adb-pause" checked> 폰마다 시작 전 확인 (아무 키나 누르기)</label>
-        <div class="field"><label>한 명 끝난 뒤 대기 (초)</label><input type="number" id="adb-delay" step="0.5" min="0" value="3"></div>
+      </div>
+      <div class="row" style="margin-top:14px;">
+        <div class="field"><label>한 명 끝난 뒤 대기 (초) — 쉼표로 여러 개</label><input type="text" id="adb-delay" value="4,6,5" style="width:160px" placeholder="4,6,5"></div>
+        <div class="field"><label>대기 시간 바꾸는 방식</label>
+          <select id="adb-delay-mode"><option value="random">무작위로 섞기 (같은 값 연속 없음)</option><option value="cycle">입력한 순서대로 반복 (4→6→5→4…)</option></select></div>
+        <div class="field"><label>&nbsp;</label><div id="adb-estimate" style="padding:9px 0;font-size:13px;color:var(--text2)"></div></div>
       </div>
       <div class="row" style="margin-top:14px;">
         <button class="btn accent" id="btn-adb-test">🧪 1명 테스트 .bat 받기</button>
@@ -296,7 +301,7 @@ let state = {
   data: {},           // artistName -> [{label, ids:[], done:[bool]}]
   serials: {},        // "artist|phoneIdx" -> serial
   cur: { key: null, idx: 0 },
-  adb: { steps: null, kb: true, delay: 3, pause: true }
+  adb: { steps: null, kb: true, delay: '4,6,5', delayMode: 'random', pause: true }
 };
 
 /* ---------- 저장 ---------- */
@@ -736,14 +741,17 @@ const T = (label, x = '', y = '') => ({ type: 'tap', label, x, y });
 const W = sec => ({ type: 'wait', sec });
 const PRESETS = {
   kakao: [
-    T('친구 탭 상단 「친구 추가」 아이콘'), W(1),
-    T('「ID로 추가」 탭'), W(1),
-    T('ID 입력칸'), { type: 'clear' }, { type: 'id' }, { type: 'enter' }, W(2),
-    T('검색 결과의 「친구 추가」 버튼'), W(2),
-    T('추가된 친구 프로필 열기 / 이름 옆 편집(연필)'), W(1),
+    T('하단 「친구」 탭 (매번 같은 화면에서 시작)'), W(1),
+    T('오른쪽 위 「친구 추가」 아이콘 (사람+)'), W(1.5),
+    T('「ID로 추가」'), W(1.5),
+    T('카카오톡 ID 입력칸'), { type: 'clear' }, { type: 'id' }, W(0.5), { type: 'enter' }, W(2.5),
+    T('검색 결과의 노란 「친구 추가」 버튼'), W(2.5),
+    { type: 'back' }, W(1), { type: 'back' }, W(1),
+    T('친구 목록 맨 위 「새로운 친구」에서 방금 추가한 친구 (또는 친구 검색)'), W(1.5),
+    T('친구 프로필에서 이름 옆 편집(연필) 아이콘'), W(1.5),
     T('이름 입력칸'), { type: 'clear' }, { type: 'name' }, W(0.5),
-    T('「확인/저장」 버튼'), W(1),
-    { type: 'back' }, W(0.5), { type: 'back' }, W(0.5), { type: 'back' }
+    T('「확인」 버튼'), W(1.5),
+    { type: 'back' }, W(1)
   ],
   line: [
     T('홈 상단 「친구 추가」 아이콘'), W(1),
@@ -766,17 +774,21 @@ function ensureSteps() {
     if (a.submit === 'enter' || a.submit === 'both') a.steps.push({ type: 'enter' });
     if (a.submit !== 'enter') a.steps.push(T('등록/추가 버튼', a.btnX || '', a.btnY || ''));
     if (a.hidekb) a.steps.push({ type: 'back' });
-    a.delay = Math.max(+a.delay || 0, 3);
+    a.delay = '4,6,5';
   }
   if (a.kb === undefined) a.kb = true;
+  if (typeof a.delay === 'number') a.delay = String(a.delay);
+  if (!a.delayMode) a.delayMode = 'random';
 }
 function renderAdb() {
   ensureSteps();
-  $('adb-kb').checked = !!state.adb.kb; $('adb-pause').checked = !!state.adb.pause; $('adb-delay').value = state.adb.delay;
+  $('adb-kb').checked = !!state.adb.kb; $('adb-pause').checked = !!state.adb.pause; $('adb-delay').value = state.adb.delay; $('adb-delay-mode').value = state.adb.delayMode;
+  renderEstimate();
   renderSteps();
 }
 function renderSteps() {
   const st = state.adb.steps;
+  if ($('adb-estimate')) setTimeout(renderEstimate);
   $('step-list').innerHTML = st.length ? st.map((s, i) => `<div class="step-row" data-i="${i}">
       <span class="step-n">${i + 1}</span>
       <select data-f="type">${Object.entries(STEP_TYPES).map(([k, v]) => `<option value="${k}" ${k === s.type ? 'selected' : ''}>${v}</option>`).join('')}</select>
@@ -796,7 +808,7 @@ function renderSteps() {
       if (f === 'type') { state.adb.steps[i] = el.value === 'tap' ? T('', '', '') : el.value === 'wait' ? W(1) : { type: el.value }; save(); renderSteps(); return; }
       step[f] = (f === 'x' || f === 'y' || f === 'sec') ? (el.value === '' ? '' : +el.value) : el.value;
       if (f === 'x' || f === 'y') el.classList.toggle('need', el.value === '');
-      save();
+      save(); renderEstimate();
     });
     row.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
       const st = state.adb.steps, act = b.dataset.act;
@@ -817,7 +829,32 @@ $('adb-preset').onchange = e => {
 $('btn-step-add').onclick = () => { state.adb.steps.push(T('', '', '')); save(); renderSteps(); };
 $('adb-kb').onchange = () => { state.adb.kb = $('adb-kb').checked; save(); };
 $('adb-pause').onchange = () => { state.adb.pause = $('adb-pause').checked; save(); };
-$('adb-delay').onchange = () => { state.adb.delay = +$('adb-delay').value || 0; save(); };
+$('adb-delay').onchange = () => { const v = parseDelays($('adb-delay').value); state.adb.delay = v.join(','); $('adb-delay').value = state.adb.delay; save(); renderEstimate(); };
+$('adb-delay-mode').onchange = () => { state.adb.delayMode = $('adb-delay-mode').value; save(); };
+/* "4,6,5" → [4,6,5] */
+function parseDelays(t) { return String(t || '').split(/[,\s/]+/).map(Number).filter(n => isFinite(n) && n >= 0); }
+/* n명 분량의 대기 시간 목록 */
+function delaySeq(n) {
+  const d = parseDelays(state.adb.delay);
+  if (!d.length) return Array(n).fill(0);
+  if (state.adb.delayMode === 'cycle') return Array.from({ length: n }, (_, i) => d[i % d.length]);
+  // 무작위: 같은 값이 연달아 나오지 않도록
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    let v, tries = 0;
+    do { v = d[Math.floor(Math.random() * d.length)]; } while (d.length > 1 && v === out[i - 1] && ++tries < 10);
+    out.push(v);
+  }
+  return out;
+}
+function renderEstimate() {
+  const d = parseDelays(state.adb.delay);
+  const avg = d.length ? d.reduce((x, y) => x + y, 0) / d.length : 0;
+  const st = state.adb.steps || [];
+  const per = st.reduce((x, s) => x + (s.type === 'wait' ? (+s.sec || 0) : 0.4), 0) + avg;
+  const min = Math.ceil(per * state.cfg.per / 60);
+  $('adb-estimate').textContent = `한 명 약 ${per.toFixed(0)}초 · 폰 1대(${state.cfg.per}명) 약 ${min}분`;
+}
 
 function renderSerials() {
   const ps = allPhones();
@@ -868,6 +905,7 @@ function phoneBlock(ph, onlyFirst) {
     L.push(`adb${dev} shell "ime enable ${ADBKB} >/dev/null; ime set ${ADBKB} >/dev/null"`);
   }
   if (a.pause) { L.push('echo 카카오톡/라인의 시작 화면을 띄운 뒤 아무 키나 누르세요... (중간에 멈추려면 Ctrl+C)'); L.push('pause >nul'); }
+  const delays = delaySeq(idx.length);
   idx.forEach((k, n) => {
     const id = ph.phone.ids[k], nm = displayName(ph.artist, ph.phone, k);
     if (!a.kb && /[^\x21-\x7E]/.test(id)) { skipped.push(id); return; }
@@ -881,8 +919,8 @@ function phoneBlock(ph, onlyFirst) {
       else if (s.type === 'enter') cmds.push('input keyevent 66');
       else if (s.type === 'back') cmds.push('input keyevent 4');
     });
-    if (+a.delay > 0) cmds.push(`sleep ${+a.delay}`);
-    L.push(`echo [${n + 1}/${idx.length}] ${batEcho(id)}  -^>  ${batEcho(nm)}`);
+    if (delays[n] > 0 && n < idx.length - 1) cmds.push(`sleep ${delays[n]}`);
+    L.push(`echo [${n + 1}/${idx.length}] ${batEcho(id)}  -^>  ${batEcho(nm)}${delays[n] > 0 && n < idx.length - 1 ? `   ^(다음까지 ${delays[n]}초^)` : ''}`);
     L.push(`adb${dev} shell "${batSafe(cmds.join('; '))}"`);
   });
   if (a.kb) L.push(`adb${dev} shell "ime reset >/dev/null"`);
